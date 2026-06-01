@@ -26,6 +26,7 @@ export function createSimonPuzzle(scene, interactables) {
   let showTimer   = 0;
   let failTimer   = 0;
   let playerInput = [];
+  let powerRestoredFlag = false;
 
   const group = new THREE.Group();
   group.position.set(WALL_X, 2.2, WALL_Z);
@@ -34,20 +35,20 @@ export function createSimonPuzzle(scene, interactables) {
 
   const simonTex = createSimonConsoleTexture();
 
-  const panelMat = new THREE.MeshPhongMaterial({
+  const panelMat = new THREE.MeshStandardMaterial({
     map: simonTex,
-    color: 0x5a6068, // slightly tinted grey to blend textures
-    specular: 0x445566,
-    shininess: 40,
+    color: 0x5a6068,
+    metalness: 0.65,
+    roughness: 0.50,
   });
   const panel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.1, 0.08), panelMat);
   group.add(panel);
 
-  const frameMat = new THREE.MeshPhongMaterial({
+  const frameMat = new THREE.MeshStandardMaterial({
     map: simonTex,
-    color: 0x7a8690, // outer metallic frame
-    specular: 0x88aabb,
-    shininess: 65,
+    color: 0x7a8690,
+    metalness: 0.75,
+    roughness: 0.35,
   });
   const frame = new THREE.Mesh(
     new THREE.BoxGeometry(1.22, 1.22, 0.06),
@@ -65,12 +66,12 @@ export function createSimonPuzzle(scene, interactables) {
   ];
 
   const btnMeshes = btnPositions.map((pos, i) => {
-    const mat = new THREE.MeshPhongMaterial({
+    const mat = new THREE.MeshStandardMaterial({
       color: BTN_DEFS[i].dim,
       emissive: new THREE.Color(BTN_DEFS[i].dim),
       emissiveIntensity: 0.8,
-      specular: 0x224455,
-      shininess: 60,
+      metalness: 0.0,
+      roughness: 0.55,
     });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.06), mat);
     mesh.position.set(...pos);
@@ -85,21 +86,30 @@ export function createSimonPuzzle(scene, interactables) {
   const statusTex = new THREE.CanvasTexture(statusCanvas);
   const statusMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(1.0, 0.19),
-    new THREE.MeshPhongMaterial({
+    new THREE.MeshStandardMaterial({
       map: statusTex,
       emissive: 0x0a1a20,
       emissiveIntensity: 0.5,
+      metalness: 0.0,
+      roughness: 0.9,
     })
   );
   statusMesh.position.set(0, -0.70, 0.07);
   group.add(statusMesh);
-  updateStatusLabel('F / CLICK: START');
+
+  // Initialize power offline status
+  if (!state.powerRestored) {
+    updateStatusLabel('SYSTEM OFFLINE');
+  } else {
+    updateStatusLabel('F / CLICK: START');
+    powerRestoredFlag = true;
+  }
 
   btnMeshes.forEach(({ mesh, index }) => {
     const entry = {
       mesh,
       name: BTN_DEFS[index].name,
-      prompt: 'F / CLICK',
+      prompt: state.powerRestored ? 'F / CLICK' : 'Locked (Requires Power)',
       onInteract: () => handlePress(index),
       onClick:    () => handlePress(index),
     };
@@ -107,6 +117,7 @@ export function createSimonPuzzle(scene, interactables) {
   });
 
   function handlePress(btnIndex) {
+    if (!state.powerRestored) return;
     if (simonState === 'solved') return;
     if (simonState === 'idle') {
       startShowing();
@@ -146,6 +157,25 @@ export function createSimonPuzzle(scene, interactables) {
   }
 
   function update(delta) {
+    if (!state.powerRestored) {
+      if (powerRestoredFlag) {
+        updateStatusLabel('SYSTEM OFFLINE');
+        btnMeshes.forEach(({ mesh }) => {
+          const item = interactables.find(it => it.mesh === mesh);
+          if (item) item.prompt = 'Locked (Requires Power)';
+        });
+        powerRestoredFlag = false;
+      }
+      return;
+    } else if (!powerRestoredFlag) {
+      btnMeshes.forEach(({ mesh }) => {
+        const item = interactables.find(it => it.mesh === mesh);
+        if (item) item.prompt = 'F / CLICK';
+      });
+      updateStatusLabel('F / CLICK: START');
+      powerRestoredFlag = true;
+    }
+
     if (simonState === 'showing') {
       showTimer += delta;
 

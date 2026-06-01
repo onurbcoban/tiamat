@@ -11,7 +11,7 @@ export function createBreakerPuzzle(scene, interactables, hud, movement) {
   boxGroup.rotation.y = Math.PI / 2;
   scene.add(boxGroup);
 
-  const metalMat = new THREE.MeshPhongMaterial({ color: 0x2d343b, specular: 0x5a6a75, shininess: 30 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x2d343b, metalness: 0.70, roughness: 0.50 });
 
   const wallThick = 0.01;
   const backWall = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.55, wallThick), metalMat);
@@ -55,21 +55,23 @@ export function createBreakerPuzzle(scene, interactables, hud, movement) {
   coilGroup.position.set(0, 0, 0.005);
   boxGroup.add(coilGroup);
 
-  const copperMat = new THREE.MeshPhongMaterial({
+  const copperMat = new THREE.MeshStandardMaterial({
     map: createCoilTexture(),
-    specular: 0xffcc88,
-    shininess: 80,
-    emissive: 0x3a1a00
+    metalness: 0.75,
+    roughness: 0.30,
+    emissive: 0x3a1a00,
   });
-  const coreMat = new THREE.MeshPhongMaterial({
+  const coreMat = new THREE.MeshStandardMaterial({
     color: 0x111111,
-    specular: 0x555555,
-    shininess: 30
+    metalness: 0.65,
+    roughness: 0.55,
   });
-  const glowMat = new THREE.MeshPhongMaterial({
+  const glowMat = new THREE.MeshStandardMaterial({
     color: 0x33ff66,
     emissive: 0x33ff66,
-    emissiveIntensity: 0.8
+    emissiveIntensity: 0.8,
+    metalness: 0.0,
+    roughness: 0.5,
   });
 
   const core = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.28, 12), coreMat);
@@ -96,14 +98,14 @@ export function createBreakerPuzzle(scene, interactables, hud, movement) {
   door.castShadow = true;
   doorPivot.add(door);
 
-  const stripeMat = new THREE.MeshPhongMaterial({ color: 0xc89825, emissive: 0x3a2c00 });
+  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xc89825, emissive: 0x3a2c00, metalness: 0.0, roughness: 0.65 });
   const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, 0.005), stripeMat);
   stripe.position.set(0.21, 0.08, 0.011);
   doorPivot.add(stripe);
 
   const latch = new THREE.Mesh(
     new THREE.BoxGeometry(0.02, 0.08, 0.02),
-    new THREE.MeshPhongMaterial({ color: 0x111111, specular: 0x555555 })
+    new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.70, roughness: 0.40 })
   );
   latch.position.set(0.38, 0.0, 0.015);
   doorPivot.add(latch);

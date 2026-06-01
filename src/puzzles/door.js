@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
-import { createDoorTexture, createIronFrameTexture } from '../world/textures.js';
+import { createDoorTexture, createIronFrameTexture, createDoorRoughnessMap, createDoorMetalnessMap } from '../world/textures.js';
 
 const WALL_X      = -11.40;
 const HINGE_Z     = 6.0;
@@ -24,13 +24,15 @@ export function createDoor(scene, interactables, collidableBoxes, onEscape) {
   scene.add(pivot);
 
   const doorTex = createDoorTexture();
-  const doorMat = new THREE.MeshPhongMaterial({
+  const doorMat = new THREE.MeshStandardMaterial({
     map: doorTex,
     bumpMap: doorTex,
     bumpScale: 0.016,
+    roughnessMap: createDoorRoughnessMap(),
+    metalnessMap: createDoorMetalnessMap(),
     color: 0x667686,
-    specular: 0x778899,
-    shininess: 55,
+    metalness: 1.0,
+    roughness: 1.0,
   });
 
   const doorMesh = new THREE.Mesh(
@@ -43,10 +45,10 @@ export function createDoor(scene, interactables, collidableBoxes, onEscape) {
   pivot.add(doorMesh);
 
   // Add physical horizontal structural reinforcement ribs/beams (3D texture relief)
-  const ribMat = new THREE.MeshPhongMaterial({
+  const ribMat = new THREE.MeshStandardMaterial({
     color: 0x3a424a,
-    specular: 0x556677,
-    shininess: 40
+    metalness: 0.65,
+    roughness: 0.50,
   });
   const ribGeo = new THREE.BoxGeometry(DOOR_W - 0.1, 0.08, 0.022);
   const ribZOffsets = [0.072, -0.072]; // Front and back faces of the door
@@ -63,10 +65,10 @@ export function createDoor(scene, interactables, collidableBoxes, onEscape) {
   });
 
   // Center watertight door round wheel handle (rotatable look)
-  const wheelMat = new THREE.MeshPhongMaterial({
+  const wheelMat = new THREE.MeshStandardMaterial({
     color: 0x7a6e5f,
-    specular: 0x99aacc,
-    shininess: 65
+    metalness: 0.75,
+    roughness: 0.30,
   });
   // Hinge shaft protruding from front center
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.08, 8), wheelMat);
@@ -88,11 +90,11 @@ export function createDoor(scene, interactables, collidableBoxes, onEscape) {
     pivot.add(spoke);
   }
 
-  const frameMat = new THREE.MeshPhongMaterial({
+  const frameMat = new THREE.MeshStandardMaterial({
     map: createIronFrameTexture(),
     color: 0x404a54,
-    specular: 0x223344,
-    shininess: 25,
+    metalness: 0.65,
+    roughness: 0.60,
   });
   [
     { pos: [-0.07, DOOR_H / 2, 0], size: [0.14, DOOR_H + 0.14, 0.2] },
@@ -107,11 +109,12 @@ export function createDoor(scene, interactables, collidableBoxes, onEscape) {
     pivot.add(m);
   });
 
-  const lightMat = new THREE.MeshPhongMaterial({
-    color:   0xcc2222,
+  const lightMat = new THREE.MeshStandardMaterial({
+    color: 0xcc2222,
     emissive: new THREE.Color(0xcc2222),
     emissiveIntensity: 1.0,
-    shininess: 40,
+    metalness: 0.0,
+    roughness: 0.5,
   });
   const lockLight = new THREE.Mesh(
     new THREE.SphereGeometry(0.07, 10, 10),
@@ -246,10 +249,12 @@ function makeLabel(text) {
 
   return new THREE.Mesh(
     new THREE.PlaneGeometry(0.8, 0.17),
-    new THREE.MeshPhongMaterial({
+    new THREE.MeshStandardMaterial({
       map: new THREE.CanvasTexture(c),
       emissive: 0x1a0808,
       emissiveIntensity: 0.5,
+      metalness: 0.0,
+      roughness: 0.9,
     })
   );
 }

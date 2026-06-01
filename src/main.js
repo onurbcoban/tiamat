@@ -1,5 +1,10 @@
 import './style.css';
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 import { createRoom }           from './world/room.js';
 import { createLights }         from './world/lights.js';
@@ -22,16 +27,16 @@ import { state }                from './core/state.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
 renderer.toneMapping          = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure  = 0.85;
+renderer.toneMappingExposure  = 1.30;
 renderer.outputColorSpace     = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog   = new THREE.Fog(0x000005, 8, 28);
+scene.fog = new THREE.FogExp2(0x030810, 0.042);
 
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -41,6 +46,25 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(4, 1.7, -22);
 scene.add(camera);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+
+const ssaoPass = new SSAOPass(scene, camera, window.innerWidth / 2, window.innerHeight / 2, 8);
+ssaoPass.kernelRadius = 0.75;
+ssaoPass.minDistance = 0.025;
+ssaoPass.maxDistance = 0.25;
+composer.addPass(ssaoPass);
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.08, // strength
+  0.55, // radius
+  0.99  // threshold
+);
+composer.addPass(bloomPass);
+
+composer.addPass(new OutputPass());
 
 const collidableBoxes = [];
 const interactables   = [];
@@ -93,6 +117,8 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  ssaoPass.setSize(window.innerWidth / 2, window.innerHeight / 2);
 });
 
 const clock = new THREE.Clock();
@@ -148,7 +174,9 @@ function animate() {
   if (lights && lights.flashlight) {
     camera.updateMatrixWorld(true);
   }
-
+  if (lights && typeof lights.updateRoomLights === 'function') {
+    lights.updateRoomLights(camera.position, state.powerRestored);
+  }
   if (!madRoomSlamDone && !state.isDead) {
     const cp = camera.position;
     const isInCorridor = cp.y > 0 && cp.x >= -1.6 && cp.x <= 1.6;
@@ -177,7 +205,7 @@ function animate() {
     console.log(`[DEBUG SANITY DROP > 4] Lost ${Math.round(prevSanity - state.sanity)} sanity in one frame! Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}), dist to door: ${Math.sqrt((camera.position.x - 1.5)**2 + camera.position.z**2).toFixed(2)}`);
   }
 
-  renderer.render(scene, camera);
+  composer.render();
   camera.position.copy(originalPos);
 }
 

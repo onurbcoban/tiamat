@@ -2,7 +2,7 @@ export function createOverlay(onStart) {
   const startEl = document.createElement('div');
   startEl.id = 'overlay';
   startEl.innerHTML = `
-    <h1>TIAMAT</h1>
+    <h1>ESCAPE FROM TIAMAT</h1>
     <p class="subtitle">Submarine Escape</p>
 
     <div class="controls-list">

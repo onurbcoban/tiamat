@@ -27,7 +27,7 @@ export function createPressurePuzzle(scene, interactables) {
 
   const backPanel = new THREE.Mesh(
     new THREE.BoxGeometry(1.2, 1.8, 0.16),
-    new THREE.MeshPhongMaterial({ color: 0x1f272e, specular: 0x4a5568, shininess: 30 })
+    new THREE.MeshStandardMaterial({ color: 0x1f272e, metalness: 0.65, roughness: 0.55 })
   );
   backPanel.position.set(0, -0.2, -0.08);
   group.add(backPanel);
@@ -41,14 +41,14 @@ export function createPressurePuzzle(scene, interactables) {
   const faceTex = new THREE.CanvasTexture(canvas);
   const faceMesh = new THREE.Mesh(
     new THREE.CircleGeometry(0.48, 32),
-    new THREE.MeshPhongMaterial({ map: faceTex, specular: 0x223344, shininess: 30 })
+    new THREE.MeshStandardMaterial({ map: faceTex, metalness: 0.10, roughness: 0.80 })
   );
   faceMesh.position.set(0, 0.35, 0.01);
   group.add(faceMesh);
 
   const rim = new THREE.Mesh(
     new THREE.TorusGeometry(0.48, 0.04, 8, 32),
-    new THREE.MeshPhongMaterial({ color: 0x4a6070, specular: 0x99bbcc, shininess: 100 })
+    new THREE.MeshStandardMaterial({ color: 0x4a6070, metalness: 0.80, roughness: 0.22 })
   );
   rim.position.set(0, 0.35, 0.01);
   group.add(rim);
@@ -59,14 +59,14 @@ export function createPressurePuzzle(scene, interactables) {
 
   const needleBody = new THREE.Mesh(
     new THREE.BoxGeometry(0.022, 0.38, 0.015),
-    new THREE.MeshPhongMaterial({ color: 0xff3333, specular: 0xff7777, shininess: 70 })
+    new THREE.MeshStandardMaterial({ color: 0xff3333, metalness: 0.0, roughness: 0.4 })
   );
   needleBody.position.y = 0.12;
   needleGroup.add(needleBody);
 
   const cap = new THREE.Mesh(
     new THREE.CircleGeometry(0.035, 16),
-    new THREE.MeshPhongMaterial({ color: 0x1a2230 })
+    new THREE.MeshStandardMaterial({ color: 0x1a2230, metalness: 0.60, roughness: 0.55 })
   );
   cap.position.z = 0.01;
   needleGroup.add(cap);
@@ -76,22 +76,22 @@ export function createPressurePuzzle(scene, interactables) {
   // Real specular glass cover that catches spotlight reflections
   const glassCover = new THREE.Mesh(
     new THREE.CircleGeometry(0.46, 32),
-    new THREE.MeshPhongMaterial({
+    new THREE.MeshStandardMaterial({
       color: 0xdddddd,
       transparent: true,
-      opacity: 0.22, // Increased opacity to make glass layer more visible
-      specular: 0xffffff,
-      shininess: 70, // Decreased shininess to make specular highlights wider and visible from further away
+      opacity: 0.18,
+      metalness: 0.0,
+      roughness: 0.05,
       depthWrite: false,
     })
   );
   glassCover.position.set(0, 0.35, 0.05);
   group.add(glassCover);
 
-  const brassMat = new THREE.MeshPhongMaterial({ map: createWheelTexture(), specular: 0xffe891, shininess: 80 });
-  const steelMat = new THREE.MeshPhongMaterial({ color: 0x5a6a7a, specular: 0x8899aa, shininess: 50 });
-  const ledRed   = new THREE.MeshPhongMaterial({ color: 0xcc2222, emissive: 0x991111, emissiveIntensity: 0.8 });
-  const ledGreen = new THREE.MeshPhongMaterial({ color: 0x22cc55, emissive: 0x119933, emissiveIntensity: 0.8 });
+  const brassMat = new THREE.MeshStandardMaterial({ map: createWheelTexture(), metalness: 0.75, roughness: 0.30 });
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x5a6a7a, metalness: 0.78, roughness: 0.35 });
+  const ledRed   = new THREE.MeshStandardMaterial({ color: 0xcc2222, emissive: 0x991111, emissiveIntensity: 0.8, metalness: 0.0, roughness: 0.5 });
+  const ledGreen = new THREE.MeshStandardMaterial({ color: 0x22cc55, emissive: 0x119933, emissiveIntensity: 0.8, metalness: 0.0, roughness: 0.5 });
 
   const v1Group = new THREE.Group();
   v1Group.position.set(-0.35, -0.5, 0.01);

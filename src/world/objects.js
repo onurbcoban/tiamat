@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
-import { createWheelTexture, createDoorTexture, createIronFrameTexture, createWoodTexture, createGeneratorTexture } from './textures.js';
+import { createWheelTexture, createDoorTexture, createIronFrameTexture, createWoodTexture, createGeneratorTexture, createGeneratorRoughnessMap, createGeneratorMetalnessMap, createDoorRoughnessMap, createDoorMetalnessMap } from './textures.js';
 
 export function createObjects(scene, collidableBoxes, interactables, hud, movement) {
   let updateDrawerFn = null;
@@ -47,14 +47,14 @@ export function createObjects(scene, collidableBoxes, interactables, hud, moveme
 
 
 function createCabinFurniture(scene, boxes, interactables, hud, movement) {
-  const woodMat = new THREE.MeshPhongMaterial({
+  const woodMat = new THREE.MeshStandardMaterial({
     map: createWoodTexture(),
-    specular: 0x110c08,
-    shininess: 6,
+    metalness: 0.0,
+    roughness: 0.88,
   });
-  const sheetMat = new THREE.MeshPhongMaterial({ color: 0xb0a896, shininess: 2 });
-  const blanketMat = new THREE.MeshPhongMaterial({ color: 0x223a30, specular: 0x122018, shininess: 5 });
-  const steelMat = new THREE.MeshPhongMaterial({ color: 0x2e3b44, specular: 0x556677, shininess: 40 });
+  const sheetMat = new THREE.MeshStandardMaterial({ color: 0xb0a896, metalness: 0.0, roughness: 0.95 });
+  const blanketMat = new THREE.MeshStandardMaterial({ color: 0x223a30, metalness: 0.0, roughness: 0.98 });
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x2e3b44, metalness: 0.70, roughness: 0.45 });
 
   const bedGroup = new THREE.Group();
   bedGroup.position.set(5.6, 0, -24.5);
@@ -132,10 +132,10 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
   keyGroup.rotation.y = Math.PI / 4;
   drawerGroup.add(keyGroup);
 
-  const keyMat = new THREE.MeshPhongMaterial({
+  const keyMat = new THREE.MeshStandardMaterial({
     map: createKeyTexture(),
-    specular: 0xffdf7a,
-    shininess: 80,
+    metalness: 0.75,
+    roughness: 0.30,
     emissive: 0x3a2a00,
   });
 
@@ -253,13 +253,15 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
   scene.add(cabinDoorGroup);
 
   const cabinDoorTex = createDoorTexture();
-  const cabinDoorMat = new THREE.MeshPhongMaterial({
+  const cabinDoorMat = new THREE.MeshStandardMaterial({
     map: cabinDoorTex,
     bumpMap: cabinDoorTex,
     bumpScale: 0.016,
+    roughnessMap: createDoorRoughnessMap(),
+    metalnessMap: createDoorMetalnessMap(),
     color: 0x667686,
-    specular: 0x778899,
-    shininess: 55,
+    metalness: 1.0,
+    roughness: 1.0,
   });
 
   const cabinDoorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.6, 2.0), cabinDoorMat);
@@ -269,10 +271,10 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
   cabinDoorGroup.add(cabinDoorMesh);
 
   // Add physical 3D horizontal reinforcement ribs to the cabin door faces (front and back)
-  const cabinRibMat = new THREE.MeshPhongMaterial({
+  const cabinRibMat = new THREE.MeshStandardMaterial({
     color: 0x3a4550,
-    specular: 0x556677,
-    shininess: 45
+    metalness: 0.65,
+    roughness: 0.55
   });
   const cabinRibGeo = new THREE.BoxGeometry(0.018, 0.06, 1.9); // slight protrusion on x
   const cabinRibXOffsets = [0.051, -0.051];
@@ -288,11 +290,11 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
     });
   });
 
-  const cabinFrameMat = new THREE.MeshPhongMaterial({
+  const cabinFrameMat = new THREE.MeshStandardMaterial({
     map: createIronFrameTexture(),
     color: 0x404a54,
-    specular: 0x223344,
-    shininess: 25,
+    metalness: 0.65,
+    roughness: 0.60,
   });
 
   const viewPortFrame = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 24), cabinFrameMat);
@@ -304,10 +306,10 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
   viewPortBar.position.set(0, 1.6, 1.0);
   cabinDoorGroup.add(viewPortBar);
 
-  const wheelMat = new THREE.MeshPhongMaterial({
+  const wheelMat = new THREE.MeshStandardMaterial({
     map: createWheelTexture(),
-    specular: 0xffe891,
-    shininess: 80,
+    metalness: 0.75,
+    roughness: 0.30,
   });
   [-0.07, 0.07].forEach(offset => {
     const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 8, 16), wheelMat);
@@ -389,12 +391,12 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
 
 
 function createMessFurniture(scene, boxes) {
-  const woodMat = new THREE.MeshPhongMaterial({
+  const woodMat = new THREE.MeshStandardMaterial({
     map: createWoodTexture(),
-    specular: 0x110c08,
-    shininess: 6,
+    metalness: 0.0,
+    roughness: 0.88,
   });
-  const steelMat = new THREE.MeshPhongMaterial({ color: 0x1f272e, specular: 0x445566, shininess: 30 });
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x1f272e, metalness: 0.65, roughness: 0.55 });
 
   const buildDiningSet = (tx, tz) => {
     const setGroup = new THREE.Group();
@@ -459,16 +461,16 @@ function createMessFurniture(scene, boxes) {
 
 
 function createQuartersFurniture(scene, boxes) {
-  const steelMat   = new THREE.MeshPhongMaterial({ color: 0x2c3e50, specular: 0x5d6d7e, shininess: 40 });
-  const woodMat    = new THREE.MeshPhongMaterial({
+  const steelMat   = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.70, roughness: 0.50 });
+  const woodMat    = new THREE.MeshStandardMaterial({
     map: createWoodTexture(),
-    specular: 0x110c08,
-    shininess: 6,
+    metalness: 0.0,
+    roughness: 0.88,
   });
-  const sheetMat   = new THREE.MeshPhongMaterial({ color: 0x4a5568, shininess: 2 });
-  const blanketMat = new THREE.MeshPhongMaterial({ color: 0x1a3a2a, shininess: 3 });
-  const lockerMat  = new THREE.MeshPhongMaterial({ color: 0x1c2833, specular: 0x4a5568, shininess: 55 });
-  const handleMat  = new THREE.MeshPhongMaterial({ color: 0x7f8c8d, specular: 0xbdc3c7, shininess: 80 });
+  const sheetMat   = new THREE.MeshStandardMaterial({ color: 0x4a5568, metalness: 0.0, roughness: 0.95 });
+  const blanketMat = new THREE.MeshStandardMaterial({ color: 0x1a3a2a, metalness: 0.0, roughness: 0.98 });
+  const lockerMat  = new THREE.MeshStandardMaterial({ color: 0x1c2833, metalness: 0.70, roughness: 0.40 });
+  const handleMat  = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, metalness: 0.80, roughness: 0.25 });
 
   const buildBunk = (bx, bz, facingNorth) => {
     const g = new THREE.Group();
@@ -589,9 +591,9 @@ function createQuartersFurniture(scene, boxes) {
 
 function createPumps(scene, boxes) {
   const floorY = -4;
-  const pumpMat = new THREE.MeshPhongMaterial({ color: 0x1f353a, specular: 0x3a5a60, shininess: 45 });
-  const rustMat = new THREE.MeshPhongMaterial({ color: 0x5a2d1b, specular: 0x2d1b10, shininess: 8 });
-  const steelMat = new THREE.MeshPhongMaterial({ color: 0x5a6a7a, specular: 0x8899aa, shininess: 50 });
+  const pumpMat = new THREE.MeshStandardMaterial({ color: 0x1f353a, metalness: 0.75, roughness: 0.45 });
+  const rustMat = new THREE.MeshStandardMaterial({ color: 0x5a2d1b, metalness: 0.30, roughness: 0.90 });
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x5a6a7a, metalness: 0.80, roughness: 0.30 });
 
   const buildPump = (px, pz) => {
     const pumpGroup = new THREE.Group();
@@ -679,16 +681,18 @@ function createGenerator(scene, boxes) {
   const genZ = 5.0;
 
   const genTex = createGeneratorTexture();
-  const steelMat = new THREE.MeshPhongMaterial({
+  const steelMat = new THREE.MeshStandardMaterial({
     map: genTex,
     bumpMap: genTex,
     bumpScale: 0.012,
+    roughnessMap: createGeneratorRoughnessMap(),
+    metalnessMap: createGeneratorMetalnessMap(),
     color: 0xbbbbbb,
-    specular: 0xaabbcc,
-    shininess: 70
+    metalness: 1.0,
+    roughness: 1.0,
   });
-  const copperMat = new THREE.MeshPhongMaterial({ color: 0x55606a, specular: 0xddeeff, shininess: 95 });
-  const ironMat = new THREE.MeshPhongMaterial({ color: 0x1f2124, specular: 0x666b75, shininess: 45 });
+  const copperMat = new THREE.MeshStandardMaterial({ color: 0x55606a, metalness: 0.85, roughness: 0.20 });
+  const ironMat = new THREE.MeshStandardMaterial({ color: 0x1f2124, metalness: 0.65, roughness: 0.60 });
 
   const genGroup = new THREE.Group();
   genGroup.name = "generator";
@@ -761,7 +765,7 @@ function createGenerator(scene, boxes) {
 
   // 3. Physical 3D nameplate on the control box front face (facing towards -x direction / corridor)
   const plateGeo = new THREE.BoxGeometry(0.015, 0.22, 0.42);
-  const plateMat = new THREE.MeshPhongMaterial({ color: 0x8a959d, specular: 0xffffff, shininess: 85 });
+  const plateMat = new THREE.MeshStandardMaterial({ color: 0x8a959d, metalness: 0.85, roughness: 0.20 });
   const physicalPlate = new THREE.Mesh(plateGeo, plateMat);
   physicalPlate.position.set(-1.208, 2.0, 0); // slightly protruding from controlBox side (centered at x = -0.8, half-width is 0.4 -> edge is at -1.2)
   physicalPlate.castShadow = true;
@@ -780,7 +784,7 @@ function createGenerator(scene, boxes) {
     genGroup.add(pBolt);
   });
 
-  const slotMat = new THREE.MeshPhongMaterial({ color: 0x1a2620, specular: 0x555555, shininess: 30 });
+  const slotMat = new THREE.MeshStandardMaterial({ color: 0x1a2620, metalness: 0.65, roughness: 0.55 });
   const slot = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.05, 12), slotMat);
   slot.name = "generator_slot";
   slot.rotation.z = Math.PI / 2;
@@ -801,13 +805,15 @@ function createGenerator(scene, boxes) {
 
 
 function createBridgeConsoles(scene, boxes) {
-  const steelMat = new THREE.MeshPhongMaterial({ color: 0x1a232a, specular: 0x3d4b56, shininess: 50 });
-  const screenBorderMat = new THREE.MeshPhongMaterial({ color: 0x080c10, shininess: 20 });
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x1a232a, metalness: 0.75, roughness: 0.40 });
+  const screenBorderMat = new THREE.MeshStandardMaterial({ color: 0x080c10, metalness: 0.50, roughness: 0.70 });
   
-  const neonMat = (colorHex) => new THREE.MeshPhongMaterial({
+  const neonMat = (colorHex) => new THREE.MeshStandardMaterial({
     color: 0x000000,
     emissive: new THREE.Color(colorHex),
     emissiveIntensity: 1.5,
+    metalness: 0.0,
+    roughness: 0.5,
   });
 
   const consoleGroup = new THREE.Group();
@@ -867,11 +873,12 @@ function createMagnesiumTablets(scene, interactables, hud) {
   
   const magTexture = new THREE.CanvasTexture(canvas);
 
-  const crystalMat = new THREE.MeshPhongMaterial({
+  const crystalMat = new THREE.MeshStandardMaterial({
     map: magTexture,
     emissive: 0x33cc66,
     emissiveIntensity: 0.5,
-    shininess: 90
+    metalness: 0.10,
+    roughness: 0.55,
   });
 
   const placements = [
@@ -924,10 +931,11 @@ function createMagnesiumTablets(scene, interactables, hud) {
 
 
 function createJournalPages(scene, interactables, hud, movement) {
-  const paperMat = new THREE.MeshPhongMaterial({
+  const paperMat = new THREE.MeshStandardMaterial({
     color: 0xeee4cc,
     emissive: 0x111111,
-    shininess: 5
+    metalness: 0.0,
+    roughness: 0.95,
   });
 
   const pages = [
@@ -1001,15 +1009,15 @@ I left my magnesium rations and the regulator wheel on my bunk. Whoever finds th
 
 
 function createPipes(scene) {
-  const pipeMat = new THREE.MeshPhongMaterial({
+  const pipeMat = new THREE.MeshStandardMaterial({
     color: 0x3b4a54,
-    specular: 0x5a7080,
-    shininess: 50,
+    metalness: 0.80,
+    roughness: 0.35,
   });
-  const brassValveMat = new THREE.MeshPhongMaterial({
+  const brassValveMat = new THREE.MeshStandardMaterial({
     color: 0x9c7a2b,
-    specular: 0xe0c080,
-    shininess: 70,
+    metalness: 0.75,
+    roughness: 0.30,
   });
 
   [-6.2, -2.8].forEach(x => {
@@ -1039,15 +1047,15 @@ function createPipes(scene) {
 }
 
 function createPressureValveWheel(scene, interactables, hud) {
-  const brassMat = new THREE.MeshPhongMaterial({
+  const brassMat = new THREE.MeshStandardMaterial({
     map: createWheelTexture(),
-    specular: 0xffe891,
-    shininess: 80
+    metalness: 0.75,
+    roughness: 0.30,
   });
-  const steelMat = new THREE.MeshPhongMaterial({
+  const steelMat = new THREE.MeshStandardMaterial({
     color: 0x5a6a7a,
-    specular: 0x8899aa,
-    shininess: 40
+    metalness: 0.75,
+    roughness: 0.40,
   });
 
   const wheelGroup = new THREE.Group();
@@ -1126,7 +1134,7 @@ export function spawnDroppedItem(itemType, scene, interactables, hud, x, y, z) {
     keyGroup.position.set(x, y + 0.05, z);
     scene.add(keyGroup);
 
-    const keyMat = new THREE.MeshPhongMaterial({ map: createKeyTexture(), specular: 0xffdf7a, shininess: 80, emissive: 0x3a2a00 });
+    const keyMat = new THREE.MeshStandardMaterial({ map: createKeyTexture(), metalness: 0.75, roughness: 0.30, emissive: 0x3a2a00 });
 
     const keyShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.12, 8), keyMat);
     keyShaft.rotation.z = Math.PI / 2;
@@ -1169,8 +1177,8 @@ export function spawnDroppedItem(itemType, scene, interactables, hud, x, y, z) {
     interactables.push(keyItem);
 
   } else if (itemType === 'pressure_valve_wheel') {
-    const brassMat = new THREE.MeshPhongMaterial({ map: createWheelTexture(), specular: 0xffe891, shininess: 80 });
-    const steelMat = new THREE.MeshPhongMaterial({ color: 0x5a6a7a, specular: 0x8899aa, shininess: 40 });
+    const brassMat = new THREE.MeshStandardMaterial({ map: createWheelTexture(), metalness: 0.75, roughness: 0.30 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x5a6a7a, metalness: 0.75, roughness: 0.40 });
 
     const wheelGroup = new THREE.Group();
     wheelGroup.position.set(x, y + 0.05, z);
@@ -1220,9 +1228,9 @@ export function spawnDroppedItem(itemType, scene, interactables, hud, x, y, z) {
     interactables.push(wheelItem);
 
   } else if (itemType === 'generator_coil') {
-    const copperMat = new THREE.MeshPhongMaterial({ map: createCoilTexture(), specular: 0xffcc88, shininess: 80, emissive: 0x3a1a00 });
-    const coreMat = new THREE.MeshPhongMaterial({ color: 0x111111, specular: 0x555555, shininess: 30 });
-    const glowMat = new THREE.MeshPhongMaterial({ color: 0x33ff66, emissive: 0x33ff66, emissiveIntensity: 0.8 });
+    const copperMat = new THREE.MeshStandardMaterial({ map: createCoilTexture(), metalness: 0.75, roughness: 0.30, emissive: 0x3a1a00 });
+    const coreMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.65, roughness: 0.55 });
+    const glowMat = new THREE.MeshStandardMaterial({ color: 0x33ff66, emissive: 0x33ff66, emissiveIntensity: 0.8, metalness: 0.0, roughness: 0.5 });
 
     const coilGroup = new THREE.Group();
     coilGroup.position.set(x, y + 0.08, z);

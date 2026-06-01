@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
-import { createDoorTexture, createIronFrameTexture, createWheelTexture } from '../world/textures.js';
+import { createDoorTexture, createIronFrameTexture, createWheelTexture, createDoorRoughnessMap, createDoorMetalnessMap } from '../world/textures.js';
 
 
 const SOLUTION = [true, false, true];
@@ -77,13 +77,15 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
   scene.add(doorGroup);
 
   const doorTex = createDoorTexture();
-  const doorMat = new THREE.MeshPhongMaterial({
+  const doorMat = new THREE.MeshStandardMaterial({
     map: doorTex,
     bumpMap: doorTex,
     bumpScale: 0.016,
+    roughnessMap: createDoorRoughnessMap(),
+    metalnessMap: createDoorMetalnessMap(),
     color: 0x667686,
-    specular: 0x778899,
-    shininess: 55
+    metalness: 1.0,
+    roughness: 1.0,
   });
 
   const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.6, 2.0), doorMat);
@@ -93,10 +95,10 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
   doorGroup.add(doorMesh);
 
   // Add physical 3D horizontal reinforcement ribs to the generator room door faces (front and back)
-  const generatorDoorRibMat = new THREE.MeshPhongMaterial({
+  const generatorDoorRibMat = new THREE.MeshStandardMaterial({
     color: 0x3a4550,
-    specular: 0x556677,
-    shininess: 45
+    metalness: 0.65,
+    roughness: 0.55,
   });
   const generatorDoorRibGeo = new THREE.BoxGeometry(0.018, 0.06, 1.9); // slight protrusion on x
   const generatorDoorRibXOffsets = [0.051, -0.051];
@@ -112,11 +114,11 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
     });
   });
 
-  const steelMat = new THREE.MeshPhongMaterial({
+  const steelMat = new THREE.MeshStandardMaterial({
     map: createIronFrameTexture(),
     color: 0x404a54,
-    specular: 0x223344,
-    shininess: 25
+    metalness: 0.65,
+    roughness: 0.60,
   });
   const viewPortFrame = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 24), steelMat);
   viewPortFrame.rotation.y = Math.PI / 2;
@@ -127,10 +129,10 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
   viewPortBar.position.set(0, 1.6, 1.0);
   doorGroup.add(viewPortBar);
 
-  const handleMat = new THREE.MeshPhongMaterial({
+  const handleMat = new THREE.MeshStandardMaterial({
     map: createWheelTexture(),
-    specular: 0xffe891,
-    shininess: 80
+    metalness: 0.75,
+    roughness: 0.30,
   });
   [-0.07, 0.07].forEach(offset => {
     const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 8, 16), handleMat);
@@ -139,10 +141,12 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
     doorGroup.add(wheel);
   });
 
-  const doorLightMat = new THREE.MeshPhongMaterial({
+  const doorLightMat = new THREE.MeshStandardMaterial({
     color: 0xcc2222,
     emissive: 0x661111,
-    shininess: 40
+    emissiveIntensity: 0.8,
+    metalness: 0.0,
+    roughness: 0.5,
   });
   const doorLight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), doorLightMat);
   doorLight.position.set(0.06, 2.3, 1.8);
@@ -254,15 +258,15 @@ function buildValve(scene, x, y, z, index) {
   group.position.set(x, y, z);
   scene.add(group);
 
-  const metalMat = new THREE.MeshPhongMaterial({
+  const metalMat = new THREE.MeshStandardMaterial({
     color: 0x607080,
-    specular: 0x99bbcc,
-    shininess: 90,
+    metalness: 0.85,
+    roughness: 0.22,
   });
-  const stemMat = new THREE.MeshPhongMaterial({
+  const stemMat = new THREE.MeshStandardMaterial({
     color: 0x445566,
-    specular: 0x778899,
-    shininess: 60,
+    metalness: 0.75,
+    roughness: 0.35,
   });
 
   const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.12, 16), stemMat);
@@ -288,10 +292,12 @@ function buildValve(scene, x, y, z, index) {
   spoke2.rotation.z = Math.PI / 2;
   wheelGroup.add(spoke2);
 
-  const indMat = new THREE.MeshPhongMaterial({
+  const indMat = new THREE.MeshStandardMaterial({
     color: 0xcc2222,
     emissive: 0x661111,
-    shininess: 40,
+    emissiveIntensity: 0.8,
+    metalness: 0.0,
+    roughness: 0.5,
   });
   const indicator = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), indMat);
   indicator.position.set(0.32, 0.32, 0.05);
@@ -321,12 +327,14 @@ function buildLever(scene, x, y, z) {
   group.position.set(x, y, z);
   scene.add(group);
 
-  const panelMat = new THREE.MeshPhongMaterial({ color: 0x1f242e, specular: 0x3a4b5c, shininess: 30 });
-  const leverMetalMat = new THREE.MeshPhongMaterial({ color: 0x5a6a7a, specular: 0x8899aa, shininess: 50 });
-  const redLightMat = new THREE.MeshPhongMaterial({
+  const panelMat      = new THREE.MeshStandardMaterial({ color: 0x1f242e, metalness: 0.65, roughness: 0.55 });
+  const leverMetalMat = new THREE.MeshStandardMaterial({ color: 0x5a6a7a, metalness: 0.80, roughness: 0.30 });
+  const redLightMat   = new THREE.MeshStandardMaterial({
     color: 0xcc2222,
     emissive: 0x661111,
-    shininess: 40
+    emissiveIntensity: 0.8,
+    metalness: 0.0,
+    roughness: 0.5,
   });
 
   const panel = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.08), panelMat);

@@ -1,4 +1,82 @@
 import * as THREE from 'three';
+import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
+
+function drawOrganicRust(ctx, width, height, type) {
+  const simplex = new SimplexNoise();
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const data = imgData.data;
+
+  for (let y = 0; y < height; y++) {
+    const normY = y / height;
+    for (let x = 0; x < width; x++) {
+      const normX = x / width;
+      
+      let noiseVal = 0;
+      let amp = 1.0;
+      let freq = 1.0;
+      let maxAmp = 0;
+      for (let o = 0; o < 4; o++) {
+        noiseVal += simplex.noise(normX * 10.0 * freq, normY * 20.0 * freq) * amp;
+        maxAmp += amp;
+        amp *= 0.5;
+        freq *= 2.0;
+      }
+      noiseVal = (noiseVal / maxAmp + 1.0) / 2.0;
+
+      // Rust is splotchy, not a solid gradient
+      const bottomAccum = Math.pow(normY, 4.5) * 0.65;
+      const edgeAccum = (Math.pow(1.0 - normX, 6.0) + Math.pow(normX, 6.0)) * 0.35;
+      
+      const distToVerticalSeam = Math.min(Math.abs(normX - 0.07), Math.abs(normX - 0.93));
+      const distToHorizontalSeam = Math.min(Math.abs(normY - 0.035), Math.abs(normY - 0.965));
+      const seamFactor = Math.exp(-Math.pow(Math.min(distToVerticalSeam, distToHorizontalSeam) * 18.0, 2.0)) * 0.3;
+
+      const baseRustChance = noiseVal * 0.32 + (bottomAccum + edgeAccum + seamFactor) * (0.2 + 0.8 * noiseVal);
+      
+      // Sparse rust threshold
+      const rustThreshold = 0.48;
+
+      if (baseRustChance > rustThreshold) {
+        const t = Math.min(1.0, (baseRustChance - rustThreshold) / 0.35);
+        const a = Math.floor(Math.min(0.85, (baseRustChance - rustThreshold) * 3.0) * 255);
+
+        const idx = (y * width + x) * 4;
+
+        if (type === 'color') {
+          // Organic dark iron oxide brown to detailed rust orange
+          const r = Math.floor(65 * (1 - t) + 130 * t);
+          const g = Math.floor(28 * (1 - t) + 55 * t);
+          const b = Math.floor(10 * (1 - t) + 14 * t);
+
+          const baseR = data[idx];
+          const baseG = data[idx + 1];
+          const baseB = data[idx + 2];
+          const alphaNorm = a / 255;
+
+          data[idx] = Math.floor(baseR * (1 - alphaNorm) + r * alphaNorm);
+          data[idx + 1] = Math.floor(baseG * (1 - alphaNorm) + g * alphaNorm);
+          data[idx + 2] = Math.floor(baseB * (1 - alphaNorm) + b * alphaNorm);
+        } else if (type === 'roughness') {
+          const roughnessVal = Math.floor((0.75 + t * 0.2) * 255);
+          const baseRoughness = data[idx];
+          const alphaNorm = a / 255;
+          data[idx] = Math.floor(baseRoughness * (1 - alphaNorm) + roughnessVal * alphaNorm);
+          data[idx + 1] = data[idx];
+          data[idx + 2] = data[idx];
+        } else if (type === 'metalness') {
+          const metalnessVal = 0;
+          const baseMetalness = data[idx];
+          const alphaNorm = a / 255;
+          data[idx] = Math.floor(baseMetalness * (1 - alphaNorm) + metalnessVal * alphaNorm);
+          data[idx + 1] = data[idx];
+          data[idx + 2] = data[idx];
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+}
 
 /**
  * Procedural Canvas Texture Generators for Escape from Tiamat.
@@ -25,49 +103,6 @@ export function createRustMetalTexture() {
     const size = 1 + Math.random() * 2;
     ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.2)';
     ctx.fillRect(x, y, size, size);
-  }
-
-  // Panel seams/lines (seaming plates)
-  ctx.strokeStyle = 'rgba(10, 12, 15, 0.8)';
-  ctx.lineWidth = 4;
-  // Draw a grid of steel sheets
-  ctx.beginPath();
-  // Horizontal seams
-  ctx.moveTo(0, 128); ctx.lineTo(512, 128);
-  ctx.moveTo(0, 384); ctx.lineTo(512, 384);
-  // Vertical seams
-  ctx.moveTo(256, 0); ctx.lineTo(256, 512);
-  ctx.stroke();
-
-  // Highlight seams (bevel effect)
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(0, 130); ctx.lineTo(512, 130);
-  ctx.moveTo(0, 386); ctx.lineTo(512, 386);
-  ctx.moveTo(257, 0); ctx.lineTo(257, 512);
-  ctx.stroke();
-
-  // Rivets/Bolts along the seams
-  ctx.fillStyle = 'rgba(15, 18, 22, 0.9)';
-  const drawRivet = (rx, ry) => {
-    ctx.beginPath();
-    ctx.arc(rx, ry, 5, 0, Math.PI * 2);
-    ctx.fill();
-    // Rivet highlight
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-    ctx.beginPath();
-    ctx.arc(rx - 1, ry - 1, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(15, 18, 22, 0.9)'; // restore
-  };
-
-  // Add rivets along vertical seam
-  for (let y = 16; y < 512; y += 32) {
-    if (Math.abs(y - 128) > 10 && Math.abs(y - 384) > 10) {
-      drawRivet(246, y);
-      drawRivet(266, y);
-    }
   }
 
   // Subtle rust patches and drips (reduced frequency, size, and opacity for realism)
@@ -266,68 +301,60 @@ export function createGaugeScratchTexture() {
  */
 export function createDoorTexture() {
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 512;
+  canvas.width = 512;
+  canvas.height = 1024;
   const ctx = canvas.getContext('2d');
 
   // Dark industrial steel/iron base
   ctx.fillStyle = '#222b32';
-  ctx.fillRect(0, 0, 256, 512);
+  ctx.fillRect(0, 0, 512, 1024);
 
   // Metallic noise/grain
-  for (let i = 0; i < 2000; i++) {
-    const x = Math.random() * 256;
-    const y = Math.random() * 512;
+  for (let i = 0; i < 8000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 1024;
     ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.15)';
     ctx.fillRect(x, y, 1, 1);
   }
 
   // Cross-beveling panel lines (reinforced plating look - single heavy piece)
   ctx.strokeStyle = 'rgba(10, 15, 20, 0.85)';
-  ctx.lineWidth = 4.5;
+  ctx.lineWidth = 9.0;
   ctx.beginPath();
   // Outer frame borders
-  ctx.strokeRect(18, 18, 220, 476);
+  ctx.strokeRect(36, 36, 440, 952);
   ctx.stroke();
 
   // Fine bevel highlights for 3D depth
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 3.0;
   ctx.beginPath();
-  ctx.strokeRect(19, 19, 218, 474);
+  ctx.strokeRect(38, 38, 436, 948);
   ctx.stroke();
 
   // Diagonal yellow/black warning hazard stripes on left/right outer borders (no text)
-  const stripeW = 16;
-  for (let y = 0; y < 512; y += 24) {
+  const stripeW = 32;
+  for (let y = 0; y < 1024; y += 48) {
     ctx.fillStyle = '#ccaa22'; // Dull industrial yellow
     // Left border stripe
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(stripeW, y + 12);
     ctx.lineTo(stripeW, y + 24);
-    ctx.lineTo(0, y + 12);
+    ctx.lineTo(stripeW, y + 48);
+    ctx.lineTo(0, y + 24);
     ctx.fill();
 
     // Right border stripe
     ctx.beginPath();
-    ctx.moveTo(256 - stripeW, y);
-    ctx.lineTo(256, y + 12);
-    ctx.lineTo(256, y + 24);
-    ctx.lineTo(256 - stripeW, y + 12);
+    ctx.moveTo(512 - stripeW, y);
+    ctx.lineTo(512, y + 24);
+    ctx.lineTo(512, y + 48);
+    ctx.lineTo(512 - stripeW, y + 24);
     ctx.fill();
   }
 
-  // Grease streaks around the handle areas (middle right and middle left)
-  ctx.fillStyle = 'rgba(10, 8, 5, 0.4)';
-  for (let i = 0; i < 4; i++) {
-    const rx = 100 + Math.random() * 56;
-    const ry = 220 + Math.random() * 80;
-    const r = 10 + Math.random() * 15;
-    ctx.beginPath();
-    ctx.arc(rx, ry, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // Draw organic simplex noise-based rust layer (much more realistic than simple circles)
+  drawOrganicRust(ctx, 512, 1024, 'color');
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
@@ -558,6 +585,149 @@ export function createGeneratorTexture() {
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
+export function createGeneratorRoughnessMap() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  // Base roughness of military steel panel: ~0.45
+  ctx.fillStyle = '#737373';
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Micro roughness noise
+  for (let i = 0; i < 4000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 256;
+    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)';
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  // Panel seams are rougher
+  ctx.strokeStyle = 'rgba(200, 200, 200, 0.6)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(128, 0); ctx.lineTo(128, 256);
+  ctx.moveTo(256, 0); ctx.lineTo(256, 256);
+  ctx.moveTo(384, 0); ctx.lineTo(384, 256);
+  ctx.moveTo(0, 128); ctx.lineTo(512, 128);
+  ctx.stroke();
+
+  // Grease, oil stains and leaks are very rough
+  for (let i = 0; i < 6; i++) {
+    const rx = Math.random() * 512;
+    const ry = Math.random() * 100;
+    const dripLen = 20 + Math.random() * 90;
+    
+    const grad = ctx.createLinearGradient(rx, ry, rx, ry + dripLen);
+    grad.addColorStop(0, 'rgba(230, 230, 230, 0.65)');
+    grad.addColorStop(1, 'rgba(115, 115, 115, 0)');
+    
+    ctx.fillStyle = grad;
+    ctx.fillRect(rx - 1.5, ry, 3 + Math.random() * 2, dripLen);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
+export function createGeneratorMetalnessMap() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  // Base metalness of military steel: ~0.8
+  ctx.fillStyle = '#cccccc';
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Grease and oil stains are non-metallic
+  for (let i = 0; i < 6; i++) {
+    const rx = Math.random() * 512;
+    const ry = Math.random() * 100;
+    const dripLen = 20 + Math.random() * 90;
+    
+    const grad = ctx.createLinearGradient(rx, ry, rx, ry + dripLen);
+    grad.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
+    grad.addColorStop(1, 'rgba(204, 204, 204, 0)');
+    
+    ctx.fillStyle = grad;
+    ctx.fillRect(rx - 1.5, ry, 3 + Math.random() * 2, dripLen);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
+export function createDoorRoughnessMap() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+
+  // Base roughness: ~0.55
+  ctx.fillStyle = '#8c8c8c';
+  ctx.fillRect(0, 0, 512, 1024);
+
+  // Micro noise
+  for (let i = 0; i < 4000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 1024;
+    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)';
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  // Warning stripes areas on left/right outer borders are matte
+  ctx.fillStyle = 'rgba(220, 220, 220, 0.4)';
+  ctx.fillRect(0, 0, 32, 1024);
+  ctx.fillRect(512 - 32, 0, 32, 1024);
+
+  // Worn out beveled edges are extremely shiny
+  ctx.strokeStyle = 'rgba(40, 40, 40, 0.6)';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(36, 36, 440, 952);
+
+  // Apply organic noise-based rust to roughness map
+  drawOrganicRust(ctx, 512, 1024, 'roughness');
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
+export function createDoorMetalnessMap() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+
+  // Base metalness: ~0.8
+  ctx.fillStyle = '#cccccc';
+  ctx.fillRect(0, 0, 512, 1024);
+
+  // Warning hazard stripes are painted (non-metallic)
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, 32, 1024);
+  ctx.fillRect(512 - 32, 0, 32, 1024);
+
+  // Apply organic noise-based rust to metalness map
+  drawOrganicRust(ctx, 512, 1024, 'metalness');
+
+  const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   return texture;

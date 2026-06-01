@@ -24,11 +24,12 @@ export function createGeneratorPuzzle(scene, interactables, collidableBoxes, hud
       hitMesh.position.copy(slotMesh.position);
       genGroup.add(hitMesh);
 
-      indicatorRingMat = new THREE.MeshPhongMaterial({
+      indicatorRingMat = new THREE.MeshStandardMaterial({
         color: 0xff8800,
         emissive: 0xff8800,
         emissiveIntensity: 1.0,
-        shininess: 30
+        metalness: 0.1,
+        roughness: 0.5
       });
       indicatorRingRef = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.008, 8, 16), indicatorRingMat);
       indicatorRingRef.rotation.y = Math.PI / 2;
@@ -78,16 +79,16 @@ export function createGeneratorPuzzle(scene, interactables, collidableBoxes, hud
     insertedCoilGroup.position.set(-0.30, 2.0, 0);
     genGroup.add(insertedCoilGroup);
 
-    const copperMat = new THREE.MeshPhongMaterial({
-      color: 0xb87333,
-      specular: 0xffcc88,
-      shininess: 80,
+    const copperMat = new THREE.MeshStandardMaterial({
+      map: createCoilTexture(),
+      metalness: 0.75,
+      roughness: 0.30,
       emissive: 0x3a1a00
     });
-    const coreMat = new THREE.MeshPhongMaterial({
+    const coreMat = new THREE.MeshStandardMaterial({
       color: 0x111111,
-      specular: 0x555555,
-      shininess: 30
+      metalness: 0.65,
+      roughness: 0.55
     });
 
     const core = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.28, 12), coreMat);
@@ -136,33 +137,57 @@ export function createGeneratorPuzzle(scene, interactables, collidableBoxes, hud
     }
 
     if (flickerActive) {
+      state.flickerActive = true;
       flickerTimer += delta;
 
       const ambient = scene.getObjectByName("ambientLight");
       const hemi = scene.getObjectByName("hemiLight");
       const dir = scene.getObjectByName("dirLight");
+      const emergency = scene.getObjectByName("emergencyLights");
+      const mainLights = scene.getObjectByName("mainLights");
+
+      const setCeilingLightsState = (isMainOn, mainIntensity, isEmergencyOn) => {
+        if (emergency) {
+          emergency.visible = isEmergencyOn;
+        }
+        if (mainLights) {
+          mainLights.visible = isMainOn;
+          mainLights.children.forEach(child => {
+            if (child.name === "mainPointLight") {
+              child.intensity = isMainOn ? mainIntensity : 0;
+            } else if (child.name === "mainBulbMesh" || child.name === "mainSocketMesh") {
+              child.visible = isMainOn;
+            }
+          });
+        }
+      };
 
       if (ambient && hemi && dir) {
         if (flickerTimer < 0.2) {
           ambient.intensity = 0;
           hemi.intensity = 0;
           dir.intensity = 0;
+          setCeilingLightsState(false, 0, false);
         } else if (flickerTimer < 0.35) {
-          ambient.color.setHex(0xffffff); ambient.intensity = 3.0;
-          hemi.color.setHex(0xffffff); hemi.intensity = 2.0;
-          dir.color.setHex(0xffffff); dir.intensity = 1.5;
+          ambient.color.setHex(0xffffff); ambient.intensity = 1.5;
+          hemi.color.setHex(0xffffff); hemi.intensity = 1.0;
+          dir.color.setHex(0xffffff); dir.intensity = 0.5;
+          setCeilingLightsState(true, 4.5, false);
         } else if (flickerTimer < 0.6) {
           ambient.intensity = 0;
           hemi.intensity = 0;
           dir.intensity = 0;
+          setCeilingLightsState(false, 0, false);
         } else if (flickerTimer < 0.75) {
-          ambient.color.setHex(0xffffff); ambient.intensity = 3.0;
-          hemi.intensity = 2.0;
-          dir.intensity = 1.5;
+          ambient.color.setHex(0xffffff); ambient.intensity = 1.5;
+          hemi.intensity = 1.0;
+          dir.intensity = 0.5;
+          setCeilingLightsState(true, 4.5, false);
         } else if (flickerTimer < 0.9) {
           ambient.intensity = 0;
           hemi.intensity = 0;
           dir.intensity = 0;
+          setCeilingLightsState(false, 0, false);
         } else if (flickerTimer < 1.2) {
           const isWhite = Math.random() > 0.4;
           const flickerIntensity = 0.5 + Math.random() * 1.5;
@@ -171,14 +196,16 @@ export function createGeneratorPuzzle(scene, interactables, collidableBoxes, hud
             ambient.color.setHex(0xffffff);
             hemi.color.setHex(0xaabbcc);
             dir.color.setHex(0xffffff);
+            setCeilingLightsState(true, flickerIntensity * 3.5, false);
           } else {
             ambient.color.setHex(0xaa1111);
             hemi.color.setHex(0xff2222);
             dir.color.setHex(0xff2222);
+            setCeilingLightsState(false, 0, true);
           }
-          ambient.intensity = flickerIntensity;
-          hemi.intensity = flickerIntensity * 0.6;
-          dir.intensity = flickerIntensity * 0.4;
+          ambient.intensity = flickerIntensity * 0.5;
+          hemi.intensity = flickerIntensity * 0.4;
+          dir.intensity = flickerIntensity * 0.2;
         } else if (flickerTimer < 1.5) {
           const t = (flickerTimer - 1.2) / 0.3; 
           ambient.color.setHex(0xffffff);
@@ -186,15 +213,18 @@ export function createGeneratorPuzzle(scene, interactables, collidableBoxes, hud
           hemi.groundColor.setHex(0x223344);
           dir.color.setHex(0xffffff);
 
-          ambient.intensity = 1.5 + t * 1.0;
-          hemi.intensity = 0.8 + t * 0.7;
-          dir.intensity = 0.6 + t * 0.4;
+          ambient.intensity = 0.5 + t * 0.7;
+          hemi.intensity = 0.3 + t * 0.5;
+          dir.intensity = 0.1 + t * 0.4;
+          setCeilingLightsState(true, t * 5.5, false);
         } else {
-          ambient.color.setHex(0xffffff); ambient.intensity = 2.5;
-          hemi.color.setHex(0xaabbcc); hemi.groundColor.setHex(0x223344); hemi.intensity = 1.5;
-          dir.color.setHex(0xffffff); dir.intensity = 1.0;
+          ambient.color.setHex(0xffffff); ambient.intensity = 2.2;
+          hemi.color.setHex(0xaabbcc); hemi.groundColor.setHex(0x223344); hemi.intensity = 1.4;
+          dir.color.setHex(0xffffff); dir.intensity = 0.8;
+          setCeilingLightsState(true, 5.5, false);
 
           flickerActive = false;
+          state.flickerActive = false;
           console.log("[Tiamat] Power grid locked. Daylight restored.");
         }
       }
@@ -203,4 +233,24 @@ export function createGeneratorPuzzle(scene, interactables, collidableBoxes, hud
   }
 
   return { update };
+}
+
+function createCoilTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#b87333';
+  ctx.fillRect(0, 0, 128, 128);
+
+  for (let y = 0; y < 128; y += 4) {
+    ctx.fillStyle = '#e08544';
+    ctx.fillRect(0, y, 128, 2);
+
+    ctx.fillStyle = '#4a1f11';
+    ctx.fillRect(0, y + 2, 128, 2);
+  }
+
+  return new THREE.CanvasTexture(canvas);
 }
