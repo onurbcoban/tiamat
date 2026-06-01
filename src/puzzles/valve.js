@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
+import { createDoorTexture, createIronFrameTexture, createWheelTexture } from '../world/textures.js';
 
 
 const SOLUTION = [true, false, true];
@@ -75,10 +76,14 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
   doorGroup.position.set(-1.5, -4.0, 4.0); 
   scene.add(doorGroup);
 
+  const doorTex = createDoorTexture();
   const doorMat = new THREE.MeshPhongMaterial({
-    color: 0x1f2429,
-    specular: 0x3c4c5c,
-    shininess: 35
+    map: doorTex,
+    bumpMap: doorTex,
+    bumpScale: 0.016,
+    color: 0x667686,
+    specular: 0x778899,
+    shininess: 55
   });
 
   const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.6, 2.0), doorMat);
@@ -87,7 +92,32 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
   doorMesh.receiveShadow = true;
   doorGroup.add(doorMesh);
 
-  const steelMat = new THREE.MeshPhongMaterial({ color: 0x2e3b44, specular: 0x556677, shininess: 40 });
+  // Add physical 3D horizontal reinforcement ribs to the generator room door faces (front and back)
+  const generatorDoorRibMat = new THREE.MeshPhongMaterial({
+    color: 0x3a4550,
+    specular: 0x556677,
+    shininess: 45
+  });
+  const generatorDoorRibGeo = new THREE.BoxGeometry(0.018, 0.06, 1.9); // slight protrusion on x
+  const generatorDoorRibXOffsets = [0.051, -0.051];
+  const generatorDoorRibYPositions = [0.55, 2.05];
+  
+  generatorDoorRibXOffsets.forEach(xOff => {
+    generatorDoorRibYPositions.forEach(yPos => {
+      const rib = new THREE.Mesh(generatorDoorRibGeo, generatorDoorRibMat);
+      rib.position.set(xOff, yPos, 1.0);
+      rib.castShadow = true;
+      rib.receiveShadow = true;
+      doorGroup.add(rib);
+    });
+  });
+
+  const steelMat = new THREE.MeshPhongMaterial({
+    map: createIronFrameTexture(),
+    color: 0x404a54,
+    specular: 0x223344,
+    shininess: 25
+  });
   const viewPortFrame = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 24), steelMat);
   viewPortFrame.rotation.y = Math.PI / 2;
   viewPortFrame.position.set(0, 1.6, 1.0);
@@ -97,7 +127,11 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
   viewPortBar.position.set(0, 1.6, 1.0);
   doorGroup.add(viewPortBar);
 
-  const handleMat = new THREE.MeshPhongMaterial({ color: 0x111111, specular: 0x555555, shininess: 80 });
+  const handleMat = new THREE.MeshPhongMaterial({
+    map: createWheelTexture(),
+    specular: 0xffe891,
+    shininess: 80
+  });
   [-0.07, 0.07].forEach(offset => {
     const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 8, 16), handleMat);
     wheel.rotation.y = Math.PI / 2;

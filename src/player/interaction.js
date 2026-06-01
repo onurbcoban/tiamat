@@ -27,7 +27,7 @@ export function createInteraction(camera, interactables, getIsLocked) {
     const mat = target.material;
     if (!mat.emissive) return;
     item._origEmissive = mat.emissive.getHex();
-    mat.emissive.setHex(0x14202c);
+    mat.emissive.setHex(0x060c12);
   }
 
   function unhighlight(item) {

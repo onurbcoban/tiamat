@@ -49,7 +49,18 @@ export function createOverlay(onStart) {
       winEl.classList.add('visible');
       document.exitPointerLock();
     },
-    showDeath(onComplete) {
+    showDeath(onComplete, reason = 'drowning') {
+      const h2 = deathEl.querySelector('h2');
+      const p = deathEl.querySelector('p');
+      if (reason === 'sanity') {
+        h2.textContent = "LOST YOUR MIND";
+        h2.style.color = "#ff3333";
+        p.textContent = "You surrendered to the madness of Section 4.";
+      } else {
+        h2.textContent = "YOU DROWNED";
+        h2.style.color = "var(--col-danger)";
+        p.textContent = "Your oxygen has run out.";
+      }
       deathEl.classList.add('visible');
       document.exitPointerLock();
       setTimeout(() => {

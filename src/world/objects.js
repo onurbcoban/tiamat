@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
+import { createWheelTexture, createDoorTexture, createIronFrameTexture, createWoodTexture, createGeneratorTexture } from './textures.js';
 
 export function createObjects(scene, collidableBoxes, interactables, hud, movement) {
   let updateDrawerFn = null;
@@ -46,7 +47,11 @@ export function createObjects(scene, collidableBoxes, interactables, hud, moveme
 
 
 function createCabinFurniture(scene, boxes, interactables, hud, movement) {
-  const woodMat = new THREE.MeshPhongMaterial({ color: 0x4a2f1b, specular: 0x1f130a, shininess: 8 });
+  const woodMat = new THREE.MeshPhongMaterial({
+    map: createWoodTexture(),
+    specular: 0x110c08,
+    shininess: 6,
+  });
   const sheetMat = new THREE.MeshPhongMaterial({ color: 0xb0a896, shininess: 2 });
   const blanketMat = new THREE.MeshPhongMaterial({ color: 0x223a30, specular: 0x122018, shininess: 5 });
   const steelMat = new THREE.MeshPhongMaterial({ color: 0x2e3b44, specular: 0x556677, shininess: 40 });
@@ -128,7 +133,7 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
   drawerGroup.add(keyGroup);
 
   const keyMat = new THREE.MeshPhongMaterial({
-    color: 0xd4af37,
+    map: createKeyTexture(),
     specular: 0xffdf7a,
     shininess: 80,
     emissive: 0x3a2a00,
@@ -247,10 +252,14 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
   cabinDoorGroup.position.set(1.5, 0, -23.0);
   scene.add(cabinDoorGroup);
 
+  const cabinDoorTex = createDoorTexture();
   const cabinDoorMat = new THREE.MeshPhongMaterial({
-    color: 0x242e38,
-    specular: 0x455666,
-    shininess: 40,
+    map: cabinDoorTex,
+    bumpMap: cabinDoorTex,
+    bumpScale: 0.016,
+    color: 0x667686,
+    specular: 0x778899,
+    shininess: 55,
   });
 
   const cabinDoorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.6, 2.0), cabinDoorMat);
@@ -259,16 +268,47 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
   cabinDoorMesh.receiveShadow = true;
   cabinDoorGroup.add(cabinDoorMesh);
 
-  const viewPortFrame = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 24), steelMat);
+  // Add physical 3D horizontal reinforcement ribs to the cabin door faces (front and back)
+  const cabinRibMat = new THREE.MeshPhongMaterial({
+    color: 0x3a4550,
+    specular: 0x556677,
+    shininess: 45
+  });
+  const cabinRibGeo = new THREE.BoxGeometry(0.018, 0.06, 1.9); // slight protrusion on x
+  const cabinRibXOffsets = [0.051, -0.051];
+  const cabinRibYPositions = [0.55, 2.05];
+  
+  cabinRibXOffsets.forEach(xOff => {
+    cabinRibYPositions.forEach(yPos => {
+      const rib = new THREE.Mesh(cabinRibGeo, cabinRibMat);
+      rib.position.set(xOff, yPos, 1.0);
+      rib.castShadow = true;
+      rib.receiveShadow = true;
+      cabinDoorGroup.add(rib);
+    });
+  });
+
+  const cabinFrameMat = new THREE.MeshPhongMaterial({
+    map: createIronFrameTexture(),
+    color: 0x404a54,
+    specular: 0x223344,
+    shininess: 25,
+  });
+
+  const viewPortFrame = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 24), cabinFrameMat);
   viewPortFrame.rotation.y = Math.PI / 2;
   viewPortFrame.position.set(0, 1.6, 1.0);
   cabinDoorGroup.add(viewPortFrame);
 
-  const viewPortBar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 8), steelMat);
+  const viewPortBar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 8), cabinFrameMat);
   viewPortBar.position.set(0, 1.6, 1.0);
   cabinDoorGroup.add(viewPortBar);
 
-  const wheelMat = new THREE.MeshPhongMaterial({ color: 0x1f272e, specular: 0x445566, shininess: 50 });
+  const wheelMat = new THREE.MeshPhongMaterial({
+    map: createWheelTexture(),
+    specular: 0xffe891,
+    shininess: 80,
+  });
   [-0.07, 0.07].forEach(offset => {
     const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 8, 16), wheelMat);
     wheel.rotation.y = Math.PI / 2;
@@ -349,7 +389,11 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
 
 
 function createMessFurniture(scene, boxes) {
-  const woodMat = new THREE.MeshPhongMaterial({ color: 0x3d281a, specular: 0x140e0a, shininess: 6 });
+  const woodMat = new THREE.MeshPhongMaterial({
+    map: createWoodTexture(),
+    specular: 0x110c08,
+    shininess: 6,
+  });
   const steelMat = new THREE.MeshPhongMaterial({ color: 0x1f272e, specular: 0x445566, shininess: 30 });
 
   const buildDiningSet = (tx, tz) => {
@@ -416,7 +460,11 @@ function createMessFurniture(scene, boxes) {
 
 function createQuartersFurniture(scene, boxes) {
   const steelMat   = new THREE.MeshPhongMaterial({ color: 0x2c3e50, specular: 0x5d6d7e, shininess: 40 });
-  const woodMat    = new THREE.MeshPhongMaterial({ color: 0x3b2a1a, specular: 0x1a1008, shininess: 6  });
+  const woodMat    = new THREE.MeshPhongMaterial({
+    map: createWoodTexture(),
+    specular: 0x110c08,
+    shininess: 6,
+  });
   const sheetMat   = new THREE.MeshPhongMaterial({ color: 0x4a5568, shininess: 2 });
   const blanketMat = new THREE.MeshPhongMaterial({ color: 0x1a3a2a, shininess: 3 });
   const lockerMat  = new THREE.MeshPhongMaterial({ color: 0x1c2833, specular: 0x4a5568, shininess: 55 });
@@ -630,9 +678,17 @@ function createGenerator(scene, boxes) {
   const genX = -6.5;
   const genZ = 5.0;
 
-  const steelMat = new THREE.MeshPhongMaterial({ color: 0x2c3e35, specular: 0x4a6055, shininess: 35 });
-  const copperMat = new THREE.MeshPhongMaterial({ color: 0xb87333, specular: 0xffcc88, shininess: 80 });
-  const ironMat = new THREE.MeshPhongMaterial({ color: 0x1f2124, specular: 0x444850, shininess: 25 });
+  const genTex = createGeneratorTexture();
+  const steelMat = new THREE.MeshPhongMaterial({
+    map: genTex,
+    bumpMap: genTex,
+    bumpScale: 0.012,
+    color: 0xbbbbbb,
+    specular: 0xaabbcc,
+    shininess: 70
+  });
+  const copperMat = new THREE.MeshPhongMaterial({ color: 0x55606a, specular: 0xddeeff, shininess: 95 });
+  const ironMat = new THREE.MeshPhongMaterial({ color: 0x1f2124, specular: 0x666b75, shininess: 45 });
 
   const genGroup = new THREE.Group();
   genGroup.name = "generator";
@@ -656,10 +712,73 @@ function createGenerator(scene, boxes) {
   windings.position.set(0, 1.2, 0);
   genGroup.add(windings);
 
+  // 1. Physical 3D metal reinforcement bands/rings around the stator
+  const bandGeo = new THREE.CylinderGeometry(0.692, 0.692, 0.08, 16);
+  const bandPositions = [-0.9, -0.4, 0.4, 0.9];
+  bandPositions.forEach(xPos => {
+    const band = new THREE.Mesh(bandGeo, ironMat);
+    band.rotation.z = Math.PI / 2;
+    band.position.set(xPos, 1.2, 0);
+    band.castShadow = true;
+    band.receiveShadow = true;
+    genGroup.add(band);
+    
+    // Physical 3D bolts/rivets on each band
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+      const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.02, 6), ironMat);
+      // Place bolt radially on the band's surface
+      bolt.position.set(
+        xPos,
+        1.2 + Math.cos(a) * 0.695,
+        Math.sin(a) * 0.695
+      );
+      // Rotate bolt to align with surface normal
+      bolt.rotation.x = a;
+      bolt.rotation.z = Math.PI / 2;
+      bolt.castShadow = true;
+      genGroup.add(bolt);
+    }
+  });
+
+  // 2. Physical 3D cooling fins/grills along the top of the stator cylinder
+  const finGeo = new THREE.BoxGeometry(1.6, 0.04, 0.015);
+  for (let i = -5; i <= 5; i++) {
+    if (Math.abs(i) < 2) continue; // skip center winding gap
+    const angle = (i * 12 * Math.PI) / 180; // distribute on the upper curve
+    const fin = new THREE.Mesh(finGeo, ironMat);
+    fin.position.set(0, 1.2 + Math.cos(angle) * 0.685, Math.sin(angle) * 0.685);
+    fin.rotation.x = angle;
+    fin.castShadow = true;
+    fin.receiveShadow = true;
+    genGroup.add(fin);
+  }
+
   const controlBox = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 1.0), steelMat);
   controlBox.position.set(-0.8, 2.0, 0);
   controlBox.castShadow = true;
+  controlBox.receiveShadow = true;
   genGroup.add(controlBox);
+
+  // 3. Physical 3D nameplate on the control box front face (facing towards -x direction / corridor)
+  const plateGeo = new THREE.BoxGeometry(0.015, 0.22, 0.42);
+  const plateMat = new THREE.MeshPhongMaterial({ color: 0x8a959d, specular: 0xffffff, shininess: 85 });
+  const physicalPlate = new THREE.Mesh(plateGeo, plateMat);
+  physicalPlate.position.set(-1.208, 2.0, 0); // slightly protruding from controlBox side (centered at x = -0.8, half-width is 0.4 -> edge is at -1.2)
+  physicalPlate.castShadow = true;
+  genGroup.add(physicalPlate);
+
+  // Add 3D bolts on the corners of the nameplate
+  const plateBoltGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.012, 6);
+  plateBoltGeo.rotateZ(Math.PI / 2);
+  const boltsOffsets = [
+    [0.08, 0.17], [0.08, -0.17], [-0.08, 0.17], [-0.08, -0.17]
+  ];
+  boltsOffsets.forEach(([dy, dz]) => {
+    const pBolt = new THREE.Mesh(plateBoltGeo, ironMat);
+    pBolt.position.set(-1.215, 2.0 + dy, dz);
+    pBolt.castShadow = true;
+    genGroup.add(pBolt);
+  });
 
   const slotMat = new THREE.MeshPhongMaterial({ color: 0x1a2620, specular: 0x555555, shininess: 30 });
   const slot = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.05, 12), slotMat);
@@ -728,10 +847,30 @@ function createBridgeConsoles(scene, boxes) {
 
 
 function createMagnesiumTablets(scene, interactables, hud) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  
+  ctx.fillStyle = '#aaffbb';
+  ctx.fillRect(0, 0, 64, 64);
+  
+  for (let i = 0; i < 120; i++) {
+    const x = Math.random() * 64;
+    const y = Math.random() * 64;
+    const radius = 0.5 + Math.random() * 1.5;
+    ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#33cc66';
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  const magTexture = new THREE.CanvasTexture(canvas);
+
   const crystalMat = new THREE.MeshPhongMaterial({
-    color: 0xaaffbb,
+    map: magTexture,
     emissive: 0x33cc66,
-    emissiveIntensity: 0.9,
+    emissiveIntensity: 0.5,
     shininess: 90
   });
 
@@ -901,7 +1040,7 @@ function createPipes(scene) {
 
 function createPressureValveWheel(scene, interactables, hud) {
   const brassMat = new THREE.MeshPhongMaterial({
-    color: 0xc2a649,
+    map: createWheelTexture(),
     specular: 0xffe891,
     shininess: 80
   });
@@ -915,18 +1054,18 @@ function createPressureValveWheel(scene, interactables, hud) {
   wheelGroup.position.set(5.6, 0.75, -9.4);
   scene.add(wheelGroup);
 
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.04, 8), steelMat);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.04, 16), steelMat);
   hub.rotation.x = Math.PI / 2;
   wheelGroup.add(hub);
 
   for (let i = 0; i < 3; i++) {
     const angle = (i * 2 * Math.PI) / 3;
-    const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 8), brassMat);
+    const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 12), brassMat);
     spoke.rotation.z = angle;
     spoke.position.set(0.06 * Math.sin(angle), 0.06 * Math.cos(angle), 0);
     wheelGroup.add(spoke);
 
-    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), brassMat);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.018, 16, 16), brassMat);
     knob.position.set(0.12 * Math.sin(angle), 0.12 * Math.cos(angle), 0);
     wheelGroup.add(knob);
   }
@@ -987,7 +1126,7 @@ export function spawnDroppedItem(itemType, scene, interactables, hud, x, y, z) {
     keyGroup.position.set(x, y + 0.05, z);
     scene.add(keyGroup);
 
-    const keyMat = new THREE.MeshPhongMaterial({ color: 0xd4af37, specular: 0xffdf7a, shininess: 80, emissive: 0x3a2a00 });
+    const keyMat = new THREE.MeshPhongMaterial({ map: createKeyTexture(), specular: 0xffdf7a, shininess: 80, emissive: 0x3a2a00 });
 
     const keyShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.12, 8), keyMat);
     keyShaft.rotation.z = Math.PI / 2;
@@ -1030,25 +1169,25 @@ export function spawnDroppedItem(itemType, scene, interactables, hud, x, y, z) {
     interactables.push(keyItem);
 
   } else if (itemType === 'pressure_valve_wheel') {
-    const brassMat = new THREE.MeshPhongMaterial({ color: 0xc2a649, specular: 0xffe891, shininess: 80 });
+    const brassMat = new THREE.MeshPhongMaterial({ map: createWheelTexture(), specular: 0xffe891, shininess: 80 });
     const steelMat = new THREE.MeshPhongMaterial({ color: 0x5a6a7a, specular: 0x8899aa, shininess: 40 });
 
     const wheelGroup = new THREE.Group();
     wheelGroup.position.set(x, y + 0.05, z);
     scene.add(wheelGroup);
 
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.04, 8), steelMat);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.04, 16), steelMat);
     hub.rotation.x = Math.PI / 2;
     wheelGroup.add(hub);
 
     for (let i = 0; i < 3; i++) {
       const angle = (i * 2 * Math.PI) / 3;
-      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 8), brassMat);
+      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 12), brassMat);
       spoke.rotation.z = angle;
       spoke.position.set(0.06 * Math.sin(angle), 0.06 * Math.cos(angle), 0);
       wheelGroup.add(spoke);
 
-      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), brassMat);
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.018, 16, 16), brassMat);
       knob.position.set(0.12 * Math.sin(angle), 0.12 * Math.cos(angle), 0);
       wheelGroup.add(knob);
     }
@@ -1081,7 +1220,7 @@ export function spawnDroppedItem(itemType, scene, interactables, hud, x, y, z) {
     interactables.push(wheelItem);
 
   } else if (itemType === 'generator_coil') {
-    const copperMat = new THREE.MeshPhongMaterial({ color: 0xb87333, specular: 0xffcc88, shininess: 80, emissive: 0x3a1a00 });
+    const copperMat = new THREE.MeshPhongMaterial({ map: createCoilTexture(), specular: 0xffcc88, shininess: 80, emissive: 0x3a1a00 });
     const coreMat = new THREE.MeshPhongMaterial({ color: 0x111111, specular: 0x555555, shininess: 30 });
     const glowMat = new THREE.MeshPhongMaterial({ color: 0x33ff66, emissive: 0x33ff66, emissiveIntensity: 0.8 });
 
@@ -1131,4 +1270,52 @@ export function spawnDroppedItem(itemType, scene, interactables, hud, x, y, z) {
     };
     interactables.push(coilItem);
   }
+}
+
+function createKeyTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+
+  const grad = ctx.createLinearGradient(0, 0, 128, 64);
+  grad.addColorStop(0, '#ffe893');
+  grad.addColorStop(0.3, '#d4af37');
+  grad.addColorStop(0.7, '#b28d24');
+  grad.addColorStop(1, '#70540c');
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 64);
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i < 10; i++) {
+    const y = Math.random() * 64;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(128, y + (Math.random() - 0.5) * 10);
+    ctx.stroke();
+  }
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+function createCoilTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#b87333';
+  ctx.fillRect(0, 0, 128, 128);
+
+  for (let y = 0; y < 128; y += 4) {
+    ctx.fillStyle = '#e08544';
+    ctx.fillRect(0, y, 128, 2);
+
+    ctx.fillStyle = '#4a1f11';
+    ctx.fillRect(0, y + 2, 128, 2);
+  }
+
+  return new THREE.CanvasTexture(canvas);
 }

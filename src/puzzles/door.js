@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
+import { createDoorTexture, createIronFrameTexture } from '../world/textures.js';
 
 const WALL_X      = -11.40;
 const HINGE_Z     = 6.0;
@@ -22,10 +23,14 @@ export function createDoor(scene, interactables, collidableBoxes, onEscape) {
   pivot.rotation.y = Math.PI / 2;
   scene.add(pivot);
 
+  const doorTex = createDoorTexture();
   const doorMat = new THREE.MeshPhongMaterial({
-    color: 0x3a5060,
-    specular: 0x7aabcc,
-    shininess: 70,
+    map: doorTex,
+    bumpMap: doorTex,
+    bumpScale: 0.016,
+    color: 0x667686,
+    specular: 0x778899,
+    shininess: 55,
   });
 
   const doorMesh = new THREE.Mesh(
@@ -34,12 +39,60 @@ export function createDoor(scene, interactables, collidableBoxes, onEscape) {
   );
   doorMesh.position.set(DOOR_W / 2, DOOR_H / 2, 0);
   doorMesh.castShadow = true;
+  doorMesh.receiveShadow = true;
   pivot.add(doorMesh);
 
+  // Add physical horizontal structural reinforcement ribs/beams (3D texture relief)
+  const ribMat = new THREE.MeshPhongMaterial({
+    color: 0x3a424a,
+    specular: 0x556677,
+    shininess: 40
+  });
+  const ribGeo = new THREE.BoxGeometry(DOOR_W - 0.1, 0.08, 0.022);
+  const ribZOffsets = [0.072, -0.072]; // Front and back faces of the door
+  const ribYPositions = [DOOR_H * 0.22, DOOR_H * 0.42, DOOR_H * 0.78];
+  
+  ribZOffsets.forEach(zOff => {
+    ribYPositions.forEach(yPos => {
+      const rib = new THREE.Mesh(ribGeo, ribMat);
+      rib.position.set(DOOR_W / 2, yPos, zOff);
+      rib.castShadow = true;
+      rib.receiveShadow = true;
+      pivot.add(rib);
+    });
+  });
+
+  // Center watertight door round wheel handle (rotatable look)
+  const wheelMat = new THREE.MeshPhongMaterial({
+    color: 0x7a6e5f,
+    specular: 0x99aacc,
+    shininess: 65
+  });
+  // Hinge shaft protruding from front center
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.08, 8), wheelMat);
+  shaft.rotation.x = Math.PI / 2;
+  shaft.position.set(DOOR_W / 2, DOOR_H / 2 + 0.1, 0.08);
+  shaft.castShadow = true;
+  pivot.add(shaft);
+  // Torus wheel
+  const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.025, 8, 16), wheelMat);
+  wheel.position.set(DOOR_W / 2, DOOR_H / 2 + 0.1, 0.12);
+  wheel.castShadow = true;
+  pivot.add(wheel);
+  // Spokes
+  for (let i = 0; i < 3; i++) {
+    const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.48, 8), wheelMat);
+    spoke.rotation.z = (i * Math.PI) / 3;
+    spoke.position.set(DOOR_W / 2, DOOR_H / 2 + 0.1, 0.12);
+    spoke.castShadow = true;
+    pivot.add(spoke);
+  }
+
   const frameMat = new THREE.MeshPhongMaterial({
-    color: 0x223344,
-    specular: 0x557799,
-    shininess: 50,
+    map: createIronFrameTexture(),
+    color: 0x404a54,
+    specular: 0x223344,
+    shininess: 25,
   });
   [
     { pos: [-0.07, DOOR_H / 2, 0], size: [0.14, DOOR_H + 0.14, 0.2] },

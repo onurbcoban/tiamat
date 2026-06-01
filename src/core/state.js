@@ -15,6 +15,7 @@ export const state = {
   isSwimming: false,
   waterDrained: false,
   isDead: false,
+  madRoomSlamTriggered: false,
 
   get allSolved() {
     return this.puzzles.valve && this.puzzles.pressure && this.puzzles.simon;

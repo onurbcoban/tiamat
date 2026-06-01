@@ -16,7 +16,7 @@ export function createMovement(camera, collidableBoxes, domElement) {
   const STAND_HEIGHT  = 1.7;
   const CROUCH_HEIGHT = 1.0;
   const SPEED   = 4;
-  const GRAVITY = -15;
+  const GRAVITY = -9.8;
   const JUMP_V  = 6;
 
   let velocityY = 0;
@@ -101,7 +101,7 @@ export function createMovement(camera, collidableBoxes, domElement) {
 
     if (isSwimming) {
       if (state.oxygen > 0) {
-        state.oxygen = Math.max(0, state.oxygen - 8 * delta);
+        state.oxygen = Math.max(0, state.oxygen - 4 * delta);
         state.drowningTime = 0;
       } else {
         state.drowningTime = Math.min(4.0, state.drowningTime + delta);
@@ -114,22 +114,30 @@ export function createMovement(camera, collidableBoxes, domElement) {
     if (!state.isDead) {
       let sanityDrain = 0;
 
-      const madDoorX = 1.5;
-      const madDoorZ = 0.0;
-      const distToMadDoor = Math.sqrt(
-        (camera.position.x - madDoorX) ** 2 +
-        (camera.position.z - madDoorZ) ** 2
-      );
-      if (distToMadDoor < 2.0) {
-        sanityDrain += 18;
-      } else if (distToMadDoor < 4.5) {
-        sanityDrain += 8;
+      const isInCorridor = camera.position.y > 0 && camera.position.x >= -1.6 && camera.position.x <= 1.6;
+      if (isInCorridor) {
+        const madDoorX = 1.5;
+        const madDoorZ = 0.0;
+        const distToMadDoor = Math.sqrt(
+          (camera.position.x - madDoorX) ** 2 +
+          (camera.position.z - madDoorZ) ** 2
+        );
+        if (distToMadDoor < 1.5) {
+          sanityDrain +=11;
+        } else if (distToMadDoor < 4.5) {
+          sanityDrain += 7;
+        }
       }
 
       const flashlight = camera.children.find(c => c.isSpotLight);
       if (flashlight && flashlight.intensity < 0.8) {
         const darknessRatio = 1 - (flashlight.intensity / 0.8);
         sanityDrain += darknessRatio * 4;
+      }
+
+      if (state.oxygen < 100) {
+        const oxygenLoss = 100 - state.oxygen;
+        sanityDrain += (oxygenLoss / 100) * 5.0;
       }
 
       if (sanityDrain > 0) {

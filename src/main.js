@@ -25,6 +25,9 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+renderer.toneMapping          = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure  = 0.85;
+renderer.outputColorSpace     = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -94,9 +97,15 @@ window.addEventListener('resize', () => {
 
 const clock = new THREE.Clock();
 
+let shakeTime = 0.0;
+let shakeAmount = 0.0;
+let sanityZeroTime = 0.0;
+let madRoomSlamDone = false;
+
 function animate() {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.1);
+  const prevSanity = state.sanity;
 
   if (movement.isLocked()) {
     movement.update(delta);
@@ -106,17 +115,22 @@ function animate() {
   if (state.drowningTime >= 4.0 && !state.isDead) {
     state.isDead = true;
     overlay.showDeath(() => {
-      camera.position.set(4, 1.7, -22);
-      camera.rotation.set(0, 0, 0);
+      window.location.reload();
+    }, 'drowning');
+  }
 
-      state.oxygen = 100;
-      state.sanity = 100;
-      state.drowningTime = 0;
-      state.isSwimming = false;
-      state.isDead = false;
-
-      movement.controls.lock();
-    });
+  if (state.sanity <= 0 && !state.isDead) {
+    sanityZeroTime += delta;
+    shakeTime = 0.1;
+    shakeAmount = 0.04 + (sanityZeroTime / 3.0) * 0.35;
+    if (sanityZeroTime >= 3.0) {
+      state.isDead = true;
+      overlay.showDeath(() => {
+        window.location.reload();
+      }, 'sanity');
+    }
+  } else {
+    sanityZeroTime = 0.0;
   }
 
   valve.update(delta);
@@ -133,24 +147,38 @@ function animate() {
 
   if (lights && lights.flashlight) {
     camera.updateMatrixWorld(true);
-    if (!window._lastLogTime) window._lastLogTime = 0;
-    const now = Date.now();
-    if (now - window._lastLogTime > 1000) {
-      window._lastLogTime = now;
-      const cPos = new THREE.Vector3();
-      const lPos = new THREE.Vector3();
-      const tPos = new THREE.Vector3();
-      camera.getWorldPosition(cPos);
-      lights.flashlight.getWorldPosition(lPos);
-      lights.flashlight.target.getWorldPosition(tPos);
-      console.log(`[Flashlight Debug]
-  Camera: localY=${camera.position.y.toFixed(2)}, worldY=${cPos.y.toFixed(2)}, parent=${camera.parent ? camera.parent.name || camera.parent.type : 'none'}
-  Light:  localY=${lights.flashlight.position.y.toFixed(2)}, worldY=${lPos.y.toFixed(2)}, parent=${lights.flashlight.parent ? lights.flashlight.parent.name || lights.flashlight.parent.type : 'none'}
-  Target: localY=${lights.flashlight.target.position.y.toFixed(2)}, worldY=${tPos.y.toFixed(2)}, parent=${lights.flashlight.target.parent ? lights.flashlight.target.parent.name || lights.flashlight.target.parent.type : 'none'}`);
+  }
+
+  if (!madRoomSlamDone && !state.isDead) {
+    const cp = camera.position;
+    const isInCorridor = cp.y > 0 && cp.x >= -1.6 && cp.x <= 1.6;
+    if (isInCorridor) {
+      if (Math.abs(cp.z) < 0.8) {
+        madRoomSlamDone = true;
+        shakeTime = 1.1;
+        shakeAmount = 0.11;
+        state.sanity = Math.max(0, state.sanity - 15);
+        hud.updateStats(state);
+        console.log("[Tiamat] Event: Someone slams against the quarantine door!");
+      }
     }
   }
 
+  const originalPos = new THREE.Vector3().copy(camera.position);
+  if (shakeTime > 0) {
+    shakeTime -= delta;
+    const intensity = (shakeTime / 0.8) * shakeAmount;
+    camera.position.x += (Math.random() - 0.5) * intensity;
+    camera.position.y += (Math.random() - 0.5) * intensity;
+    camera.position.z += (Math.random() - 0.5) * intensity;
+  }
+
+  if (prevSanity - state.sanity > 2.0) {
+    console.log(`[DEBUG SANITY DROP > 4] Lost ${Math.round(prevSanity - state.sanity)} sanity in one frame! Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}), dist to door: ${Math.sqrt((camera.position.x - 1.5)**2 + camera.position.z**2).toFixed(2)}`);
+  }
+
   renderer.render(scene, camera);
+  camera.position.copy(originalPos);
 }
 
 animate();

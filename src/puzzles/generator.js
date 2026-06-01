@@ -7,74 +7,9 @@ export function createGeneratorPuzzle(scene, interactables, collidableBoxes, hud
   let slotMesh = null;
   let hitMesh = null;
   let insertedCoilGroup = null;
-  let doorInteractable = null;
-
-  let doorUnlocked = false;
-  let doorOpen = false;
-  let doorAnimating = false;
-  let doorAngle = 0;
 
   let flickerActive = false;
   let flickerTimer = 0;
-
-  const doorGroup = new THREE.Group();
-  doorGroup.position.set(-1.5, 0.0, 4.0); 
-  scene.add(doorGroup);
-
-  const doorMat = new THREE.MeshPhongMaterial({
-    color: 0x22303c,
-    specular: 0x4a5d6e,
-    shininess: 40
-  });
-
-  const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.6, 2.0), doorMat);
-  doorMesh.position.set(0, 1.3, 1.0); 
-  doorMesh.castShadow = true;
-  doorMesh.receiveShadow = true;
-  doorGroup.add(doorMesh);
-
-  const steelMat = new THREE.MeshPhongMaterial({ color: 0x2e3b44, specular: 0x556677, shininess: 40 });
-  const viewPortFrame = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 24), steelMat);
-  viewPortFrame.rotation.y = Math.PI / 2;
-  viewPortFrame.position.set(0, 1.6, 1.0);
-  doorGroup.add(viewPortFrame);
-
-  const viewPortBar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 8), steelMat);
-  viewPortBar.position.set(0, 1.6, 1.0);
-  doorGroup.add(viewPortBar);
-
-  const handleMat = new THREE.MeshPhongMaterial({ color: 0x111111, specular: 0x555555, shininess: 80 });
-  [-0.07, 0.07].forEach(offset => {
-    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 8, 16), handleMat);
-    wheel.rotation.y = Math.PI / 2;
-    wheel.position.set(offset, 1.2, 1.0);
-    doorGroup.add(wheel);
-  });
-
-  const doorLightMat = new THREE.MeshPhongMaterial({
-    color: 0xcc2222,
-    emissive: 0x661111,
-    shininess: 40
-  });
-  const doorLight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), doorLightMat);
-  doorLight.position.set(0.06, 2.3, 1.8);
-  doorGroup.add(doorLight);
-
-  const doorCollision = new THREE.Box3().setFromCenterAndSize(
-    new THREE.Vector3(-1.5, 1.3, 5.0),
-    new THREE.Vector3(0.2, 2.6, 2.0)
-  );
-  collidableBoxes.push(doorCollision);
-
-  doorInteractable = {
-    mesh: doorMesh,
-    name: "Bridge Door",
-    prompt: "Locked (Requires Power)",
-    onInteract: () => {
-      hud.setHovered("Bridge Door", "Locked (Requires Power)");
-    }
-  };
-  interactables.push(doorInteractable);
 
   let indicatorRingRef = null;
   let indicatorRingMat = null;
@@ -122,17 +57,7 @@ export function createGeneratorPuzzle(scene, interactables, collidableBoxes, hud
               emergency.visible = false;
             }
 
-            doorUnlocked = true;
-            doorOpen = true;
-            doorAnimating = true;
-
-            doorLightMat.color.setHex(0x22cc55);
-            doorLightMat.emissive.setHex(0x116622);
-
-            const idx = collidableBoxes.indexOf(doorCollision);
-            if (idx > -1) collidableBoxes.splice(idx, 1);
-
-            console.log("[Tiamat] Generator Coil inserted. Restoring main power surge...");
+            console.log("[Tiamat] Generator Coil inserted. Restoring main power surge Surging...");
           } else {
             console.log("[Tiamat] Generator requires Generator Coil.");
             hud.setHovered("Auxiliary Generator", "Locked (Requires Generator Coil)");
@@ -275,23 +200,6 @@ export function createGeneratorPuzzle(scene, interactables, collidableBoxes, hud
       }
     }
 
-    if (doorAnimating) {
-      const targetAngle = -Math.PI / 1.5;
-      const diff = targetAngle - doorAngle;
-
-      if (Math.abs(diff) > 0.001) {
-        doorAngle += Math.sign(diff) * Math.min(Math.abs(diff), 1.2 * delta);
-        doorGroup.rotation.y = doorAngle;
-      } else {
-        doorAngle = targetAngle;
-        doorGroup.rotation.y = doorAngle;
-        doorAnimating = false;
-
-        const idx = interactables.indexOf(doorInteractable);
-        if (idx > -1) interactables.splice(idx, 1);
-        console.log("[Tiamat] Bridge door fully open.");
-      }
-    }
   }
 
   return { update };

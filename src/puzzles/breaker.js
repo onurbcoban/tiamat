@@ -56,7 +56,7 @@ export function createBreakerPuzzle(scene, interactables, hud, movement) {
   boxGroup.add(coilGroup);
 
   const copperMat = new THREE.MeshPhongMaterial({
-    color: 0xb87333,
+    map: createCoilTexture(),
     specular: 0xffcc88,
     shininess: 80,
     emissive: 0x3a1a00
@@ -420,4 +420,24 @@ export function createBreakerPuzzle(scene, interactables, hud, movement) {
   }
 
   return { update };
+}
+
+function createCoilTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#b87333';
+  ctx.fillRect(0, 0, 128, 128);
+
+  for (let y = 0; y < 128; y += 4) {
+    ctx.fillStyle = '#e08544';
+    ctx.fillRect(0, y, 128, 2);
+
+    ctx.fillStyle = '#4a1f11';
+    ctx.fillRect(0, y + 2, 128, 2);
+  }
+
+  return new THREE.CanvasTexture(canvas);
 }

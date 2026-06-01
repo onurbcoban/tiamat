@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
+import { createSimonConsoleTexture } from '../world/textures.js';
 
 const SEQ_LEN  = 4;
 const SHOW_ON  = 0.55;
@@ -31,18 +32,22 @@ export function createSimonPuzzle(scene, interactables) {
   group.rotation.y = Math.PI;
   scene.add(group);
 
+  const simonTex = createSimonConsoleTexture();
+
   const panelMat = new THREE.MeshPhongMaterial({
-    color: 0x0d1a24,
-    specular: 0x1a3040,
-    shininess: 20,
+    map: simonTex,
+    color: 0x5a6068, // slightly tinted grey to blend textures
+    specular: 0x445566,
+    shininess: 40,
   });
   const panel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.1, 0.08), panelMat);
   group.add(panel);
 
   const frameMat = new THREE.MeshPhongMaterial({
-    color: 0x3a5060,
-    specular: 0x7799aa,
-    shininess: 80,
+    map: simonTex,
+    color: 0x7a8690, // outer metallic frame
+    specular: 0x88aabb,
+    shininess: 65,
   });
   const frame = new THREE.Mesh(
     new THREE.BoxGeometry(1.22, 1.22, 0.06),

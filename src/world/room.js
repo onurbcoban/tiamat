@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createRustMetalTexture, createDoorTexture, createIronFrameTexture, createWheelTexture } from './textures.js';
 
 const CEIL_H = 3.2;
 const MID_Y  = CEIL_H / 2;
@@ -6,15 +7,20 @@ const DOOR_W = 2;
 const DOOR_H = 2.6;
 const THICKNESS = 0.20;
 
-const matFloor = new THREE.MeshPhongMaterial({ color: 0x141c22, specular: 0x1e2d38, shininess: 12 });
-const matCeil  = new THREE.MeshPhongMaterial({ color: 0x0e1318, shininess: 0 });
-export const matWallCabin = new THREE.MeshPhongMaterial({ color: 0x1a2128, specular: 0x201a16, shininess: 15, side: THREE.DoubleSide });
-export const matWallMess = new THREE.MeshPhongMaterial({ color: 0x1a2128, specular: 0x152018, shininess: 12, side: THREE.DoubleSide });
-export const matWallCorridor = new THREE.MeshPhongMaterial({ color: 0x1a2128, specular: 0x151b20, shininess: 18, side: THREE.DoubleSide });
-export const matWallQuarters = new THREE.MeshPhongMaterial({ color: 0x1a2128, specular: 0x181f24, shininess: 15, side: THREE.DoubleSide });
-export const matWallFlooded = new THREE.MeshPhongMaterial({ color: 0x2a1e16, specular: 0x201510, shininess: 10, side: THREE.DoubleSide });
-export const matWallGenerator = new THREE.MeshPhongMaterial({ color: 0x1b1c1e, specular: 0x151515, shininess: 8, side: THREE.DoubleSide });
-export const matWallBridge = new THREE.MeshPhongMaterial({ color: 0x19222a, specular: 0x151c22, shininess: 20, side: THREE.DoubleSide });
+// Setup rust metal texture for sharing
+const rustTexture = createRustMetalTexture();
+// Repeat texture so it looks fine on walls and floors
+rustTexture.repeat.set(2, 2);
+
+const matFloor = new THREE.MeshPhongMaterial({ map: rustTexture, color: 0x222a30, specular: 0x334455, shininess: 25 });
+const matCeil  = new THREE.MeshPhongMaterial({ map: rustTexture, color: 0x151c22, shininess: 0 });
+export const matWallCabin = new THREE.MeshPhongMaterial({ map: rustTexture, color: 0x222a32, specular: 0x3a2e25, shininess: 25, side: THREE.DoubleSide });
+export const matWallMess = new THREE.MeshPhongMaterial({ map: rustTexture, color: 0x222a32, specular: 0x253a2b, shininess: 20, side: THREE.DoubleSide });
+export const matWallCorridor = new THREE.MeshPhongMaterial({ map: rustTexture, color: 0x222a32, specular: 0x25303a, shininess: 30, side: THREE.DoubleSide });
+export const matWallQuarters = new THREE.MeshPhongMaterial({ map: rustTexture, color: 0x222a32, specular: 0x2d363d, shininess: 25, side: THREE.DoubleSide });
+export const matWallFlooded = new THREE.MeshPhongMaterial({ map: rustTexture, color: 0x3a2c20, specular: 0x3d2c20, shininess: 15, side: THREE.DoubleSide });
+export const matWallGenerator = new THREE.MeshPhongMaterial({ map: rustTexture, color: 0x25272a, specular: 0x252525, shininess: 12, side: THREE.DoubleSide });
+export const matWallBridge = new THREE.MeshPhongMaterial({ map: rustTexture, color: 0x25303b, specular: 0x2d3c4a, shininess: 35, side: THREE.DoubleSide });
 
 const matDoorFrame = new THREE.MeshPhongMaterial({ color: 0x0f1317, specular: 0x1a2128, shininess: 30 });
 
@@ -229,7 +235,7 @@ function buildMainCorridor(scene, b) {
   wallW(scene, b, -26, -18, -1.5, 0, CEIL_H, matWallCorridor);
   doorWallW(scene, b, -18, -8, -1.5, 0, CEIL_H, matWallCorridor);
   wallW(scene, b, -8, 2, -1.5, 0, CEIL_H, matWallCorridor);
-  doorWallW(scene, b, 2, 8, -1.5, 0, CEIL_H, matWallCorridor);
+  wallW(scene, b, 2, 8, -1.5, 0, CEIL_H, matWallCorridor);
 
   doorWallE(scene, b, -26, -18, 1.5, 0, CEIL_H, matWallCorridor);
   doorWallE(scene, b, -18, -8, 1.5, 0, CEIL_H, matWallCorridor);
@@ -290,10 +296,14 @@ function buildMadRoomDoor(scene, b) {
   const doorX = 1.5;
   const doorZ = 0;
   
+  const doorTex = createDoorTexture();
   const doorMat = new THREE.MeshPhongMaterial({
-    color: 0x2d1f18,
-    specular: 0x3d2b20,
-    shininess: 15,
+    map: doorTex,
+    bumpMap: doorTex,
+    bumpScale: 0.016,
+    color: 0x5a4a3b, // tinted brown for old quarantine cell
+    specular: 0x15100a, // low specular reflection
+    shininess: 8, // rough matte surface
   });
   
   const frameMat = new THREE.MeshPhongMaterial({
@@ -325,6 +335,26 @@ function buildMadRoomDoor(scene, b) {
   scene.add(doorGroup);
 
   const thickness = 0.12;
+
+  // Add physical 3D horizontal reinforcement ribs to the quarantine door faces (front and back)
+  const ribMat = new THREE.MeshPhongMaterial({
+    color: 0x3d3228,
+    specular: 0x110d0a, // low specular reflection
+    shininess: 8 // rough matte surface
+  });
+  const ribGeo = new THREE.BoxGeometry(0.018, 0.06, 1.9); // slight protrusion on x
+  const ribXOffsets = [thickness / 2 + 0.009, -(thickness / 2 + 0.009)];
+  const ribYPositions = [0.35, 0.95, 2.15];
+  
+  ribXOffsets.forEach(xOff => {
+    ribYPositions.forEach(yPos => {
+      const rib = new THREE.Mesh(ribGeo, ribMat);
+      rib.position.set(doorX + xOff, yPos, doorZ);
+      rib.castShadow = true;
+      rib.receiveShadow = true;
+      doorGroup.add(rib);
+    });
+  });
 
   const bottom = new THREE.Mesh(new THREE.BoxGeometry(thickness, 1.3, 2.0), doorMat);
   bottom.position.set(doorX, 0.65, doorZ);

@@ -15,6 +15,9 @@ export function createPressurePuzzle(scene, interactables) {
   let valve3Open = false;
 
   let stableTimer = 0.0;
+  let lastV1Time = 0;
+  let lastV2Time = 0;
+  let lastV3Time = 0;
   const activeBubbles = [];
 
   const group = new THREE.Group();
@@ -70,7 +73,22 @@ export function createPressurePuzzle(scene, interactables) {
 
   needleGroup.rotation.z = needleCurrent;
 
-  const brassMat = new THREE.MeshPhongMaterial({ color: 0xc2a649, specular: 0xffe891, shininess: 80 });
+  // Real specular glass cover that catches spotlight reflections
+  const glassCover = new THREE.Mesh(
+    new THREE.CircleGeometry(0.46, 32),
+    new THREE.MeshPhongMaterial({
+      color: 0xdddddd,
+      transparent: true,
+      opacity: 0.22, // Increased opacity to make glass layer more visible
+      specular: 0xffffff,
+      shininess: 70, // Decreased shininess to make specular highlights wider and visible from further away
+      depthWrite: false,
+    })
+  );
+  glassCover.position.set(0, 0.35, 0.05);
+  group.add(glassCover);
+
+  const brassMat = new THREE.MeshPhongMaterial({ map: createWheelTexture(), specular: 0xffe891, shininess: 80 });
   const steelMat = new THREE.MeshPhongMaterial({ color: 0x5a6a7a, specular: 0x8899aa, shininess: 50 });
   const ledRed   = new THREE.MeshPhongMaterial({ color: 0xcc2222, emissive: 0x991111, emissiveIntensity: 0.8 });
   const ledGreen = new THREE.MeshPhongMaterial({ color: 0x22cc55, emissive: 0x119933, emissiveIntensity: 0.8 });
@@ -155,6 +173,9 @@ export function createPressurePuzzle(scene, interactables) {
     prompt: "F: Open Valve",
     onInteract: () => {
       if (state.puzzles.pressure) return;
+      const now = Date.now();
+      if (now - lastV1Time < 1000) return;
+      lastV1Time = now;
       valve1Open = !valve1Open;
       updateLED(v1Led, valve1Open);
     }
@@ -166,6 +187,9 @@ export function createPressurePuzzle(scene, interactables) {
     prompt: "F: Open Valve",
     onInteract: () => {
       if (state.puzzles.pressure) return;
+      const now = Date.now();
+      if (now - lastV2Time < 1000) return;
+      lastV2Time = now;
       valve2Open = !valve2Open;
       updateLED(v2Led, valve2Open);
     }
@@ -197,6 +221,9 @@ export function createPressurePuzzle(scene, interactables) {
         state.hud.setHovered("Release Valve C", "Missing Wheel (Requires Regulator Wheel)");
       }
     } else {
+      const now = Date.now();
+      if (now - lastV3Time < 1000) return;
+      lastV3Time = now;
       valve3Open = !valve3Open;
       updateLED(v3Led, valve3Open);
     }
@@ -309,12 +336,14 @@ export function createPressurePuzzle(scene, interactables) {
       v3Interactable.prompt = valve3Open ? "F: Close Valve" : "F: Open Valve";
     }
 
-    const v1Rate = valve1Open ? 0.30 : 0.0;
-    const v2Rate = valve2Open ? 0.35 : 0.0;
-    const v3Rate = (state.pressureWheelAttached && valve3Open) ? -0.50 : 0.0;
-    const netRate = v1Rate + v2Rate + v3Rate;
+    const v1Rate = valve1Open ? 0.51 : 0.0;
+    const v2Rate = valve2Open ? 0.70 : 0.0;
+    const v3Rate = (state.pressureWheelAttached && valve3Open) ? -0.25 : 0.0;
+    
+    const leakRate = (!valve1Open && !valve2Open) ? -0.30 : 0.0;
+    const netRate = v1Rate + v2Rate + v3Rate + leakRate;
 
-    const noise = (Math.random() - 0.5) * 0.06;
+    const noise = (Math.random() - 0.5) * 0.40;
 
     if (netRate !== 0 || currentValue > 0) {
       currentValue += (netRate + noise) * delta;
@@ -439,21 +468,57 @@ export function createPressurePuzzle(scene, interactables) {
 function buildThreeSpokeWheel(steelMat, brassMat) {
   const wheel = new THREE.Group();
 
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 8), steelMat);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 16), steelMat);
   hub.rotation.x = Math.PI / 2;
   wheel.add(hub);
 
   for (let i = 0; i < 3; i++) {
     const angle = (i * 2 * Math.PI) / 3;
-    const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.11, 8), brassMat);
+    const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.11, 12), brassMat);
     spoke.rotation.z = angle;
     spoke.position.set(0.055 * Math.sin(angle), 0.055 * Math.cos(angle), 0);
     wheel.add(spoke);
 
-    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 8), brassMat);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.016, 16, 16), brassMat);
     knob.position.set(0.11 * Math.sin(angle), 0.11 * Math.cos(angle), 0);
     wheel.add(knob);
   }
 
   return wheel;
+}
+
+function createWheelTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#8c7c32';
+  ctx.fillRect(0, 0, 256, 256);
+
+  ctx.fillStyle = 'rgba(15, 15, 15, 0.55)';
+  for (let i = 0; i < 20; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const r = 8 + Math.random() * 30;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = 'rgba(95, 40, 15, 0.4)';
+  for (let i = 0; i < 15; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const r = 5 + Math.random() * 20;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.anisotropy = 4;
+  return texture;
 }
