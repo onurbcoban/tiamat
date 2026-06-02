@@ -97,7 +97,6 @@ export function createSimonPuzzle(scene, interactables) {
   statusMesh.position.set(0, -0.70, 0.07);
   group.add(statusMesh);
 
-  // Initialize power offline status
   if (!state.powerRestored) {
     updateStatusLabel('SYSTEM OFFLINE');
   } else {

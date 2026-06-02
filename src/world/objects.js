@@ -49,21 +49,18 @@ export function createObjects(scene, collidableBoxes, interactables, hud, moveme
     canvas.height = 64;
     const ctx = canvas.getContext('2d');
     
-    // Outer soft refraction ring
     ctx.strokeStyle = 'rgba(180, 220, 255, 0.35)';
     ctx.lineWidth = 3.0;
     ctx.beginPath();
     ctx.arc(32, 32, 26, 0, Math.PI * 2);
     ctx.stroke();
     
-    // Inner sharp reflection ring
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
     ctx.lineWidth = 1.0;
     ctx.beginPath();
     ctx.arc(32, 32, 28, 0, Math.PI * 2);
     ctx.stroke();
     
-    // Primary highlight reflection (top-left)
     const grad1 = ctx.createRadialGradient(22, 22, 0, 22, 22, 6);
     grad1.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
     grad1.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
@@ -72,7 +69,6 @@ export function createObjects(scene, collidableBoxes, interactables, hud, moveme
     ctx.arc(22, 22, 6, 0, Math.PI * 2);
     ctx.fill();
     
-    // Secondary weaker bounce reflection (bottom-right)
     const grad2 = ctx.createRadialGradient(42, 42, 0, 42, 42, 8);
     grad2.addColorStop(0, 'rgba(180, 220, 255, 0.4)');
     grad2.addColorStop(1, 'rgba(180, 220, 255, 0.0)');
@@ -113,7 +109,7 @@ export function createObjects(scene, collidableBoxes, interactables, hud, moveme
   particleGeo.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
 
   const particleMat = new THREE.PointsMaterial({
-    size: 0.10, // slightly smaller bubbles
+    size: 0.10, 
     map: createBubbleTexture(),
     transparent: true,
     depthWrite: false,
@@ -820,49 +816,49 @@ function createQuartersFurniture(scene, boxes, interactables) {
     }
     scene.add(lg);
 
-    // Left wall of locker
+    
     const wallL = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.8, 0.38), lockerMat);
     wallL.position.set(-0.24, 0.9, 0.0);
     wallL.castShadow = true;
     wallL.receiveShadow = true;
     lg.add(wallL);
 
-    // Right wall of locker
+    
     const wallR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.8, 0.38), lockerMat);
     wallR.position.set(0.24, 0.9, 0.0);
     wallR.castShadow = true;
     wallR.receiveShadow = true;
     lg.add(wallR);
 
-    // Back wall
+    
     const wallBack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.8, 0.02), lockerMat);
     wallBack.position.set(0, 0.9, -0.19);
     wallBack.castShadow = true;
     wallBack.receiveShadow = true;
     lg.add(wallBack);
 
-    // Top wall
+    
     const wallTop = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.38), lockerMat);
     wallTop.position.set(0, 1.79, 0.0);
     wallTop.castShadow = true;
     wallTop.receiveShadow = true;
     lg.add(wallTop);
 
-    // Bottom wall
+    
     const wallBot = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.38), lockerMat);
     wallBot.position.set(0, 0.01, 0.0);
     wallBot.castShadow = true;
     wallBot.receiveShadow = true;
     lg.add(wallBot);
 
-    // Shelf in the middle horizontally splitting it
+    
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.02, 0.36), lockerMat);
     shelf.position.set(0, 0.9, 0.0);
     shelf.castShadow = true;
     shelf.receiveShadow = true;
     lg.add(shelf);
 
-    // Door pivot (hinge at the left-front corner)
+    
     const doorPivot = new THREE.Group();
     doorPivot.position.set(-0.24, 0.9, 0.19);
     lg.add(doorPivot);
@@ -1105,7 +1101,7 @@ function createGenerator(scene, boxes) {
     band.receiveShadow = true;
     genGroup.add(band);
     
-    // Physical 3D bolts/rivets on each band
+    
     for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
       const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.02, 6), ironMat);
       // Place bolt radially on the band's surface
@@ -1114,7 +1110,7 @@ function createGenerator(scene, boxes) {
         1.2 + Math.cos(a) * 0.695,
         Math.sin(a) * 0.695
       );
-      // Rotate bolt to align with surface normal
+      
       bolt.rotation.x = a;
       bolt.rotation.z = Math.PI / 2;
       bolt.castShadow = true;
@@ -1122,11 +1118,11 @@ function createGenerator(scene, boxes) {
     }
   });
 
-  // 2. Physical 3D cooling fins/grills along the top of the stator cylinder
+  
   const finGeo = new THREE.BoxGeometry(1.6, 0.04, 0.015);
   for (let i = -5; i <= 5; i++) {
-    if (Math.abs(i) < 2) continue; // skip center winding gap
-    const angle = (i * 12 * Math.PI) / 180; // distribute on the upper curve
+    if (Math.abs(i) < 2) continue; 
+    const angle = (i * 12 * Math.PI) / 180; 
     const fin = new THREE.Mesh(finGeo, ironMat);
     fin.position.set(0, 1.2 + Math.cos(angle) * 0.685, Math.sin(angle) * 0.685);
     fin.rotation.x = angle;
@@ -1141,15 +1137,13 @@ function createGenerator(scene, boxes) {
   controlBox.receiveShadow = true;
   genGroup.add(controlBox);
 
-  // 3. Physical 3D nameplate on the control box front face (facing towards -x direction / corridor)
   const plateGeo = new THREE.BoxGeometry(0.015, 0.22, 0.42);
   const plateMat = new THREE.MeshStandardMaterial({ color: 0x8a959d, metalness: 0.85, roughness: 0.20 });
   const physicalPlate = new THREE.Mesh(plateGeo, plateMat);
-  physicalPlate.position.set(-1.208, 2.0, 0); // slightly protruding from controlBox side (centered at x = -0.8, half-width is 0.4 -> edge is at -1.2)
+  physicalPlate.position.set(-1.208, 2.0, 0); 
   physicalPlate.castShadow = true;
   genGroup.add(physicalPlate);
 
-  // Add 3D bolts on the corners of the nameplate
   const plateBoltGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.012, 6);
   plateBoltGeo.rotateZ(Math.PI / 2);
   const boltsOffsets = [

@@ -17,6 +17,7 @@ export const state = {
   waterDrained: false,
   isDead: false,
   madRoomSlamTriggered: false,
+  testMode: false,
 
   readNotes: {
     captain: false,

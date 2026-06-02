@@ -104,18 +104,20 @@ export function createMovement(camera, collidableBoxes, domElement) {
     }
 
     if (isSwimming) {
-      if (state.oxygen > 0) {
-        state.oxygen = Math.max(0, state.oxygen - 4 * delta);
-        state.drowningTime = 0;
-      } else {
-        state.drowningTime = Math.min(4.0, state.drowningTime + delta);
+      if (!state.testMode) {
+        if (state.oxygen > 0) {
+          state.oxygen = Math.max(0, state.oxygen - 4 * delta);
+          state.drowningTime = 0;
+        } else {
+          state.drowningTime = Math.min(4.0, state.drowningTime + delta);
+        }
       }
     } else {
       state.oxygen = Math.min(100, state.oxygen + 15 * delta);
       state.drowningTime = Math.max(0, state.drowningTime - 2.0 * delta);
     }
 
-    if (!state.isDead) {
+    if (!state.isDead && !state.testMode) {
       let sanityDrain = 0;
 
       const isInCorridor = camera.position.y > 0 && camera.position.x >= -1.6 && camera.position.x <= 1.6;

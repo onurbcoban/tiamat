@@ -398,13 +398,12 @@ function buildMadRoomDoor(scene, b) {
 
   const thickness = 0.12;
 
-  // Add physical 3D horizontal reinforcement ribs to the quarantine door faces (front and back)
   const ribMat = new THREE.MeshStandardMaterial({
     color: 0x3d3228,
     metalness: 0.10,
     roughness: 0.92,
   });
-  const ribGeo = new THREE.BoxGeometry(0.018, 0.06, 1.9); // slight protrusion on x
+  const ribGeo = new THREE.BoxGeometry(0.018, 0.06, 1.9); 
   const ribXOffsets = [thickness / 2 + 0.009, -(thickness / 2 + 0.009)];
   const ribYPositions = [0.35, 0.95, 2.15];
   

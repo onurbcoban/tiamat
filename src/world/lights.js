@@ -32,10 +32,10 @@ const volumetricFragmentShader = `
     vec3 viewDir = normalize(vViewPosition);
     
     float edgeFade = dot(normal, viewDir);
-    edgeFade = smoothstep(0.0, 0.45, abs(edgeFade));
+    edgeFade = smoothstep(0.0, 0.65, abs(edgeFade));
     
     float distanceFade = 1.0 - vUv.y;
-    distanceFade = pow(distanceFade, 2.5);
+    distanceFade = pow(distanceFade, 1.4);
     
     float nearFade = smoothstep(0.1, 1.2, vDepth);
     
@@ -116,7 +116,7 @@ export function createLights(scene, camera) {
     const bulbY = ceilY - 0.08;
     const lightY = ceilY - 0.12;
 
-    // Convert to SpotLight pointing straight down for realistic cone lighting (Math.PI / 1.5 is ~120 degrees for maximum coverage)
+    
     const pl = new THREE.SpotLight(0xe8f4ff, 0.0, dist, Math.PI / 1.5, 1.0, 1.0);
     pl.position.set(pos.x, lightY, pos.z);
     pl.castShadow = false; // Keep disabled to maximize FPS
@@ -129,7 +129,6 @@ export function createLights(scene, camera) {
     
     mainLightsGroup.add(pl);
 
-    // Visual dark metal socket/fixture base to connect the bulb to the ceiling
     const socketGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.08, 8);
     const socketMat = new THREE.MeshStandardMaterial({ color: 0x1a2228, metalness: 0.8, roughness: 0.4 });
     const socket = new THREE.Mesh(socketGeo, socketMat);
@@ -176,8 +175,8 @@ export function createLights(scene, camera) {
     vertexShader: volumetricVertexShader,
     fragmentShader: volumetricFragmentShader,
     uniforms: {
-      color: { value: new THREE.Color(0x6ba4d8) },
-      opacity: { value: 0.15 },
+      color: { value: new THREE.Color(0x7bbde8) },
+      opacity: { value: 0.32 },
       intensity: { value: 1.0 }
     },
     transparent: true,

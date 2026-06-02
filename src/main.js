@@ -53,9 +53,9 @@ composer.addPass(new RenderPass(scene, camera));
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.08, // strength
-  0.55, // radius
-  0.99  // threshold
+  0.08, 
+  0.55, 
+  0.99  
 );
 composer.addPass(bloomPass);
 
@@ -73,6 +73,48 @@ state.scene = scene;
 state.interactables = interactables;
 state.hud = hud;
 state.camera = camera;
+
+// ── Test Mode ────────────────────────────────────────────────────────────────
+const testModeIndicator = document.createElement('div');
+testModeIndicator.id = 'test-mode-indicator';
+testModeIndicator.textContent = 'TEST MODE';
+testModeIndicator.style.cssText = [
+  'position:fixed', 'top:12px', 'left:50%', 'transform:translateX(-50%)',
+  'background:rgba(255,200,0,0.85)', 'color:#000', 'font:bold 13px monospace',
+  'padding:4px 14px', 'border-radius:4px', 'z-index:9999',
+  'pointer-events:none', 'display:none', 'letter-spacing:2px'
+].join(';');
+document.body.appendChild(testModeIndicator);
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Backquote') {
+    state.testMode = !state.testMode;
+    testModeIndicator.style.display = state.testMode ? 'block' : 'none';
+
+    state.sanity       = 100;
+    state.oxygen       = 100;
+    state.drowningTime = 0;
+
+    if (!state.testMode) {
+      const mainLights = scene.getObjectByName('mainLights');
+      const emergency  = scene.getObjectByName('emergencyLights');
+
+      if (!state.powerRestored) {
+        if (mainLights) {
+          mainLights.children.forEach(child => {
+            if (child.name === 'mainPointLight')  child.intensity = 0;
+            if (child.name === 'mainBulbMesh')    child.visible   = false;
+            if (child.name === 'mainSocketMesh')  child.visible   = false;
+          });
+        }
+        if (emergency) emergency.visible = true;
+      }
+    }
+
+    console.log(`[Tiamat] Test mode: ${state.testMode ? 'ON' : 'OFF'}`);
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 let overlay;
 const door = createDoor(scene, interactables, collidableBoxes, () => {
@@ -137,19 +179,19 @@ function animate() {
   if (movement.isLocked()) {
     movement.update(delta);
     interaction.update(hud);
-    if (!state.isDead) {
+    if (!state.isDead && !state.testMode) {
       state.sanity = Math.max(0, state.sanity - 0.25 * delta);
     }
   }
 
-  if (state.drowningTime >= 4.0 && !state.isDead) {
+  if (state.drowningTime >= 4.0 && !state.isDead && !state.testMode) {
     state.isDead = true;
     overlay.showDeath(() => {
       window.location.reload();
     }, 'drowning');
   }
 
-  if (state.sanity <= 0 && !state.isDead) {
+  if (state.sanity <= 0 && !state.isDead && !state.testMode) {
     sanityZeroTime += delta;
     shakeTime = 0.1;
     shakeAmount = 0.04 + (sanityZeroTime / 3.0) * 0.35;
@@ -179,7 +221,7 @@ function animate() {
     camera.updateMatrixWorld(true);
   }
   if (lights && typeof lights.updateRoomLights === 'function') {
-    lights.updateRoomLights(camera.position, state.powerRestored);
+    lights.updateRoomLights(camera.position, state.powerRestored || state.testMode);
   }
   if (!madRoomSlamDone && !state.isDead) {
     const cp = camera.position;
