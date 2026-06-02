@@ -1,3 +1,5 @@
+import { state } from '../core/state.js';
+
 export function createHUD() {
   function el(tag, id) {
     const e = document.createElement(tag);
@@ -35,23 +37,29 @@ export function createHUD() {
   ].join(';');
   document.body.appendChild(sanityVignette);
 
-  const statusEl = el('div', 'puzzle-status');
-  statusEl.innerHTML = `
-    <div class="puzzle-status-title">OBJECTIVES</div>
-    <div class="puzzle-indicator" id="ind-valve">
-      <span class="puzzle-check">[ ]</span>
-      <span>Valves</span>
-    </div>
-    <div class="puzzle-indicator" id="ind-pressure">
-      <span class="puzzle-check">[ ]</span>
-      <span>Pressure</span>
-    </div>
-    <div class="puzzle-indicator" id="ind-simon">
-      <span class="puzzle-check">[ ]</span>
-      <span>Panel</span>
+
+
+  const objectivesEl = el('div', 'objectives-overlay');
+  objectivesEl.id = 'objectives-overlay';
+  objectivesEl.innerHTML = `
+    <div class="notepad-box">
+      <div class="notepad-clip"></div>
+      <div class="notepad-header">LOGGED OBJECTIVES</div>
+      <div class="notepad-content" id="objectives-list">
+        <p class="notepad-empty">No objectives logged. Read discarded crew journals and notes to find instructions.</p>
+      </div>
+      <button id="objectives-close-btn">CLOSE</button>
     </div>
   `;
-  document.body.appendChild(statusEl);
+  document.body.appendChild(objectivesEl);
+
+  let lockCallback = null;
+
+  const closeObjectivesBtn = objectivesEl.querySelector('#objectives-close-btn');
+  closeObjectivesBtn.addEventListener('click', () => {
+    objectivesEl.classList.remove('visible');
+    if (lockCallback) lockCallback();
+  });
 
   const statsEl = el('div', 'stats-panel');
   statsEl.innerHTML = `
@@ -85,6 +93,10 @@ export function createHUD() {
   document.body.appendChild(itemEl);
 
   return {
+    setLockCallback(cb) {
+      lockCallback = cb;
+    },
+
     setHovered(name, prompt = null) {
       nameEl.textContent = name;
       nameEl.classList.add('visible');
@@ -102,11 +114,45 @@ export function createHUD() {
     },
 
     markSolved(puzzleName) {
-      const ind = document.getElementById(`ind-${puzzleName}`);
-      if (ind) {
-        ind.classList.add('solved');
-        const check = ind.querySelector('.puzzle-check');
-        if (check) check.textContent = '[✓]';
+      this.renderObjectives();
+    },
+
+    renderObjectives() {
+      const listEl = document.getElementById('objectives-list');
+      if (!listEl) return;
+
+      const list = state.objectives;
+      if (list.length === 0) {
+        listEl.innerHTML = `
+          <p class="notepad-empty">No objectives logged. Read discarded crew journals and notes to find instructions.</p>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = list.map(obj => `
+        <div class="notepad-objective ${obj.completed ? 'completed' : ''}">
+          <div class="objective-header-row">
+            <span class="objective-check">${obj.completed ? '[✓]' : '[ ]'}</span>
+            <span class="objective-title">${obj.title}</span>
+          </div>
+          <div class="objective-desc">${obj.desc}</div>
+        </div>
+      `).join('');
+    },
+
+    toggleObjectives() {
+      if (state.isDead) return;
+      const isVisible = objectivesEl.classList.contains('visible');
+      if (isVisible) {
+        objectivesEl.classList.remove('visible');
+        if (lockCallback) lockCallback();
+      } else {
+        const journal = document.getElementById('journal-overlay');
+        if (journal) journal.classList.remove('visible');
+
+        this.renderObjectives();
+        objectivesEl.classList.add('visible');
+        document.exitPointerLock();
       }
     },
 

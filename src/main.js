@@ -2,7 +2,6 @@ import './style.css';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
@@ -50,11 +49,7 @@ scene.add(camera);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 
-const ssaoPass = new SSAOPass(scene, camera, window.innerWidth / 2, window.innerHeight / 2, 8);
-ssaoPass.kernelRadius = 0.75;
-ssaoPass.minDistance = 0.025;
-ssaoPass.maxDistance = 0.25;
-composer.addPass(ssaoPass);
+
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
@@ -103,6 +98,13 @@ createMagnesiumHotkey(state, hud, () => movement.isLocked());
 const objects = createObjects(scene, collidableBoxes, interactables, hud, movement);
 
 overlay = createOverlay(() => movement.controls.lock());
+hud.setLockCallback(() => movement.controls.lock());
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'KeyO') {
+    hud.toggleObjectives();
+  }
+});
 
 state.onPuzzleSolved = (name) => {
   hud.markSolved(name);
@@ -118,7 +120,6 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
-  ssaoPass.setSize(window.innerWidth / 2, window.innerHeight / 2);
 });
 
 const clock = new THREE.Clock();
@@ -136,6 +137,9 @@ function animate() {
   if (movement.isLocked()) {
     movement.update(delta);
     interaction.update(hud);
+    if (!state.isDead) {
+      state.sanity = Math.max(0, state.sanity - 0.25 * delta);
+    }
   }
 
   if (state.drowningTime >= 4.0 && !state.isDead) {

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
-import { createDoorTexture, createIronFrameTexture, createWheelTexture, createDoorRoughnessMap, createDoorMetalnessMap } from '../world/textures.js';
+import { createDoorTexture, createIronFrameTexture, createWheelTexture, createDoorRoughnessMap, createDoorMetalnessMap, createDoorNormalMap } from '../world/textures.js';
 
 
 const SOLUTION = [true, false, true];
@@ -81,6 +81,8 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
     map: doorTex,
     bumpMap: doorTex,
     bumpScale: 0.016,
+    normalMap: createDoorNormalMap(),
+    normalScale: new THREE.Vector2(1.0, 1.0),
     roughnessMap: createDoorRoughnessMap(),
     metalnessMap: createDoorMetalnessMap(),
     color: 0x667686,
@@ -94,25 +96,39 @@ export function createValvePuzzle(scene, interactables, boxes, hud) {
   doorMesh.receiveShadow = true;
   doorGroup.add(doorMesh);
 
-  // Add physical 3D horizontal reinforcement ribs to the generator room door faces (front and back)
-  const generatorDoorRibMat = new THREE.MeshStandardMaterial({
-    color: 0x3a4550,
-    metalness: 0.65,
-    roughness: 0.55,
+
+
+  const rivetGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.012, 8);
+  rivetGeo.rotateZ(Math.PI / 2);
+  const rivetMat = new THREE.MeshStandardMaterial({
+    color: 0x4a5560,
+    metalness: 0.85,
+    roughness: 0.25,
   });
-  const generatorDoorRibGeo = new THREE.BoxGeometry(0.018, 0.06, 1.9); // slight protrusion on x
-  const generatorDoorRibXOffsets = [0.051, -0.051];
-  const generatorDoorRibYPositions = [0.55, 2.05];
-  
-  generatorDoorRibXOffsets.forEach(xOff => {
-    generatorDoorRibYPositions.forEach(yPos => {
-      const rib = new THREE.Mesh(generatorDoorRibGeo, generatorDoorRibMat);
-      rib.position.set(xOff, yPos, 1.0);
-      rib.castShadow = true;
-      rib.receiveShadow = true;
-      doorGroup.add(rib);
-    });
-  });
+
+  const addValveDoorRivets = (faceX) => {
+    for (let z = 0.1; z <= 1.9; z += 0.2) {
+      [0.1, 2.5].forEach(y => {
+        const rivet = new THREE.Mesh(rivetGeo, rivetMat);
+        rivet.position.set(faceX, y, z);
+        rivet.castShadow = true;
+        rivet.receiveShadow = true;
+        doorGroup.add(rivet);
+      });
+    }
+    for (let y = 0.3; y <= 2.3; y += 0.2) {
+      [0.1, 1.9].forEach(z => {
+        const rivet = new THREE.Mesh(rivetGeo, rivetMat);
+        rivet.position.set(faceX, y, z);
+        rivet.castShadow = true;
+        rivet.receiveShadow = true;
+        doorGroup.add(rivet);
+      });
+    }
+  };
+
+  addValveDoorRivets(0.052);
+  addValveDoorRivets(-0.052);
 
   const steelMat = new THREE.MeshStandardMaterial({
     map: createIronFrameTexture(),

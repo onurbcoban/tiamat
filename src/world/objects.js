@@ -1,27 +1,37 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
-import { createWheelTexture, createDoorTexture, createIronFrameTexture, createWoodTexture, createGeneratorTexture, createGeneratorRoughnessMap, createGeneratorMetalnessMap, createDoorRoughnessMap, createDoorMetalnessMap } from './textures.js';
+import { createWheelTexture, createDoorTexture, createIronFrameTexture, createWoodTexture, createGeneratorTexture, createGeneratorRoughnessMap, createGeneratorMetalnessMap, createDoorRoughnessMap, createDoorMetalnessMap, createDoorNormalMap, createGeneratorNormalMap } from './textures.js';
 
 export function createObjects(scene, collidableBoxes, interactables, hud, movement) {
   let updateDrawerFn = null;
   let updateDoorFn = null;
+  let updateCabinLockerFn = null;
 
   const cabinFurniture = createCabinFurniture(scene, collidableBoxes, interactables, hud, movement);
   if (cabinFurniture) {
     updateDrawerFn = cabinFurniture.updateDrawer;
     updateDoorFn = cabinFurniture.updateDoor;
+    updateCabinLockerFn = cabinFurniture.updateLocker;
   }
 
   createMessFurniture(scene, collidableBoxes);
 
-  createQuartersFurniture(scene, collidableBoxes);
+  let updateLockerFn = null;
+  const quartersFurniture = createQuartersFurniture(scene, collidableBoxes, interactables);
+  if (quartersFurniture) {
+    updateLockerFn = quartersFurniture.updateLocker;
+  }
 
   const pumps = createPumps(scene, collidableBoxes);
   const pumpRotor = pumps ? pumps.rotorMesh : null;
 
   createGenerator(scene, collidableBoxes);
 
-  createBridgeConsoles(scene, collidableBoxes);
+  let updateScreensFn = null;
+  const bridgeConsoles = createBridgeConsoles(scene, collidableBoxes);
+  if (bridgeConsoles) {
+    updateScreensFn = bridgeConsoles.updateScreens;
+  }
 
   createMagnesiumTablets(scene, interactables, hud);
 
@@ -37,6 +47,9 @@ export function createObjects(scene, collidableBoxes, interactables, hud, moveme
     update: (delta) => {
       if (updateDrawerFn) updateDrawerFn(delta);
       if (updateDoorFn) updateDoorFn(delta);
+      if (updateLockerFn) updateLockerFn(delta);
+      if (updateCabinLockerFn) updateCabinLockerFn(delta);
+      if (updateScreensFn) updateScreensFn(state.powerRestored);
       if (state.puzzles.pressure && pumpRotor) {
         pumpRotor.rotation.z += delta * 4.5;
       }
@@ -237,15 +250,92 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
     new THREE.Vector3(1.0, 0.8, 1.6)
   ));
 
-  const locker = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.8, 0.7), steelMat);
-  locker.position.set(2.2, 0.9, -25.5);
-  locker.castShadow = true;
-  locker.receiveShadow = true;
-  scene.add(locker);
+  const lockerMat  = new THREE.MeshStandardMaterial({ color: 0x1c2833, metalness: 0.70, roughness: 0.40 });
+  const handleMat  = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, metalness: 0.80, roughness: 0.25 });
+
+  const cabinLockerGroup = new THREE.Group();
+  cabinLockerGroup.position.set(3.8, 0, -25.8);
+  cabinLockerGroup.rotation.y = 0;
+  scene.add(cabinLockerGroup);
+
+  const wallL = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.8, 0.38), lockerMat);
+  wallL.position.set(-0.24, 0.9, 0.0);
+  wallL.castShadow = true;
+  wallL.receiveShadow = true;
+  cabinLockerGroup.add(wallL);
+
+  const wallR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.8, 0.38), lockerMat);
+  wallR.position.set(0.24, 0.9, 0.0);
+  wallR.castShadow = true;
+  wallR.receiveShadow = true;
+  cabinLockerGroup.add(wallR);
+
+  const wallBack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.8, 0.02), lockerMat);
+  wallBack.position.set(0, 0.9, -0.19);
+  wallBack.castShadow = true;
+  wallBack.receiveShadow = true;
+  cabinLockerGroup.add(wallBack);
+
+  const wallTop = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.38), lockerMat);
+  wallTop.position.set(0, 1.79, 0.0);
+  wallTop.castShadow = true;
+  wallTop.receiveShadow = true;
+  cabinLockerGroup.add(wallTop);
+
+  const wallBot = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.38), lockerMat);
+  wallBot.position.set(0, 0.01, 0.0);
+  wallBot.castShadow = true;
+  wallBot.receiveShadow = true;
+  cabinLockerGroup.add(wallBot);
+
+  const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.02, 0.36), lockerMat);
+  shelf.position.set(0, 0.9, 0.0);
+  shelf.castShadow = true;
+  shelf.receiveShadow = true;
+  cabinLockerGroup.add(shelf);
+
+  const doorPivot = new THREE.Group();
+  doorPivot.position.set(-0.24, 0.9, 0.19);
+  cabinLockerGroup.add(doorPivot);
+
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.46, 1.76, 0.02), steelMat);
+  panel.position.set(0.23, 0, 0.01);
+  panel.castShadow = true;
+  panel.receiveShadow = true;
+  doorPivot.add(panel);
+
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.15, 0.03), handleMat);
+  handle.position.set(0.18, 0.05, 0.025);
+  panel.add(handle);
+
+  const darkSlitMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.1, roughness: 0.8 });
+  for (let i = 0; i < 3; i++) {
+    const slit = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.012, 0.005), darkSlitMat);
+    slit.position.set(0, 0.7 - i * 0.03, 0.011);
+    panel.add(slit);
+  }
+
+  let lockerOpen = false;
+  let lockerAngle = 0;
+  let targetLockerAngle = 0;
+
+  const lockerInteractable = {
+    mesh: panel,
+    name: "Captain's Locker",
+    get prompt() {
+      return lockerOpen ? 'F: Close Locker' : 'F: Open Locker';
+    },
+    onInteract: () => {
+      lockerOpen = !lockerOpen;
+      targetLockerAngle = lockerOpen ? Math.PI * -0.65 : 0.0;
+      console.log(`[Tiamat] Captain Locker open state: ${lockerOpen}`);
+    }
+  };
+  interactables.push(lockerInteractable);
 
   boxes.push(new THREE.Box3().setFromCenterAndSize(
-    new THREE.Vector3(2.2, 0.9, -25.5),
-    new THREE.Vector3(0.8, 1.8, 0.7)
+    new THREE.Vector3(3.8, 0.9, -25.8),
+    new THREE.Vector3(0.5, 1.8, 0.4)
   ));
 
   const cabinDoorGroup = new THREE.Group();
@@ -259,6 +349,8 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
     bumpScale: 0.016,
     roughnessMap: createDoorRoughnessMap(),
     metalnessMap: createDoorMetalnessMap(),
+    normalMap: createDoorNormalMap(),
+    normalScale: new THREE.Vector2(1.0, 1.0),
     color: 0x667686,
     metalness: 1.0,
     roughness: 1.0,
@@ -270,25 +362,39 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
   cabinDoorMesh.receiveShadow = true;
   cabinDoorGroup.add(cabinDoorMesh);
 
-  // Add physical 3D horizontal reinforcement ribs to the cabin door faces (front and back)
-  const cabinRibMat = new THREE.MeshStandardMaterial({
-    color: 0x3a4550,
-    metalness: 0.65,
-    roughness: 0.55
+
+
+  const rivetGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.012, 8);
+  rivetGeo.rotateZ(Math.PI / 2);
+  const rivetMat = new THREE.MeshStandardMaterial({
+    color: 0x4a5560,
+    metalness: 0.85,
+    roughness: 0.25,
   });
-  const cabinRibGeo = new THREE.BoxGeometry(0.018, 0.06, 1.9); // slight protrusion on x
-  const cabinRibXOffsets = [0.051, -0.051];
-  const cabinRibYPositions = [0.55, 2.05];
-  
-  cabinRibXOffsets.forEach(xOff => {
-    cabinRibYPositions.forEach(yPos => {
-      const rib = new THREE.Mesh(cabinRibGeo, cabinRibMat);
-      rib.position.set(xOff, yPos, 1.0);
-      rib.castShadow = true;
-      rib.receiveShadow = true;
-      cabinDoorGroup.add(rib);
-    });
-  });
+
+  const addCabinDoorRivets = (faceX) => {
+    for (let z = 0.1; z <= 1.9; z += 0.2) {
+      [0.1, 2.5].forEach(y => {
+        const rivet = new THREE.Mesh(rivetGeo, rivetMat);
+        rivet.position.set(faceX, y, z);
+        rivet.castShadow = true;
+        rivet.receiveShadow = true;
+        cabinDoorGroup.add(rivet);
+      });
+    }
+    for (let y = 0.3; y <= 2.3; y += 0.2) {
+      [0.1, 1.9].forEach(z => {
+        const rivet = new THREE.Mesh(rivetGeo, rivetMat);
+        rivet.position.set(faceX, y, z);
+        rivet.castShadow = true;
+        rivet.receiveShadow = true;
+        cabinDoorGroup.add(rivet);
+      });
+    }
+  };
+
+  addCabinDoorRivets(0.052);
+  addCabinDoorRivets(-0.052);
 
   const cabinFrameMat = new THREE.MeshStandardMaterial({
     map: createIronFrameTexture(),
@@ -386,7 +492,18 @@ function createCabinFurniture(scene, boxes, interactables, hud, movement) {
     }
   }
 
-  return { updateDrawer, updateDoor };
+  function updateCabinLocker(delta) {
+    const diff = targetLockerAngle - lockerAngle;
+    if (Math.abs(diff) > 0.001) {
+      lockerAngle += diff * Math.min(1, 8 * delta);
+      doorPivot.rotation.y = lockerAngle;
+    } else {
+      lockerAngle = targetLockerAngle;
+      doorPivot.rotation.y = lockerAngle;
+    }
+  }
+
+  return { updateDrawer, updateDoor, updateLocker: updateCabinLocker };
 }
 
 
@@ -460,7 +577,7 @@ function createMessFurniture(scene, boxes) {
 
 
 
-function createQuartersFurniture(scene, boxes) {
+function createQuartersFurniture(scene, boxes, interactables) {
   const steelMat   = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.70, roughness: 0.50 });
   const woodMat    = new THREE.MeshStandardMaterial({
     map: createWoodTexture(),
@@ -512,39 +629,114 @@ function createQuartersFurniture(scene, boxes) {
   buildBunk(2.6, -9.0, true);
   buildBunk(5.6, -9.0, true);
 
+  const lockerUpdates = [];
+
   const buildLocker = (lx, lz, isWest) => {
     const lg = new THREE.Group();
     lg.position.set(lx, 0, lz);
     if(isWest){
-    lg.rotation.y = -Math.PI / 2; 
-    }
-    else{    lg.rotation.y = Math.PI / 2; 
+      lg.rotation.y = -Math.PI / 2; 
+    } else {
+      lg.rotation.y = Math.PI / 2; 
     }
     scene.add(lg);
 
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.8, 0.4), lockerMat);
-    body.position.y = 0.9;
-    body.castShadow = true;
-    body.receiveShadow = true;
-    lg.add(body);
+    // Left wall of locker
+    const wallL = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.8, 0.38), lockerMat);
+    wallL.position.set(-0.24, 0.9, 0.0);
+    wallL.castShadow = true;
+    wallL.receiveShadow = true;
+    lg.add(wallL);
 
-    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.55, 0.02), steelMat);
-    panel.position.set(0, 0.95, 0.21);
-    lg.add(panel);
+    // Right wall of locker
+    const wallR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.8, 0.38), lockerMat);
+    wallR.position.set(0.24, 0.9, 0.0);
+    wallR.castShadow = true;
+    wallR.receiveShadow = true;
+    lg.add(wallR);
 
-    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.15, 0.04), handleMat);
-    handle.position.set(0.18, 1.0, 0.23);
-    lg.add(handle);
+    // Back wall
+    const wallBack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.8, 0.02), lockerMat);
+    wallBack.position.set(0, 0.9, -0.19);
+    wallBack.castShadow = true;
+    wallBack.receiveShadow = true;
+    lg.add(wallBack);
 
+    // Top wall
+    const wallTop = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.38), lockerMat);
+    wallTop.position.set(0, 1.79, 0.0);
+    wallTop.castShadow = true;
+    wallTop.receiveShadow = true;
+    lg.add(wallTop);
+
+    // Bottom wall
+    const wallBot = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.38), lockerMat);
+    wallBot.position.set(0, 0.01, 0.0);
+    wallBot.castShadow = true;
+    wallBot.receiveShadow = true;
+    lg.add(wallBot);
+
+    // Shelf in the middle horizontally splitting it
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.02, 0.36), lockerMat);
+    shelf.position.set(0, 0.9, 0.0);
+    shelf.castShadow = true;
+    shelf.receiveShadow = true;
+    lg.add(shelf);
+
+    // Door pivot (hinge at the left-front corner)
+    const doorPivot = new THREE.Group();
+    doorPivot.position.set(-0.24, 0.9, 0.19);
+    lg.add(doorPivot);
+
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.46, 1.76, 0.02), steelMat);
+    panel.position.set(0.23, 0, 0.01);
+    panel.castShadow = true;
+    panel.receiveShadow = true;
+    doorPivot.add(panel);
+
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.15, 0.03), handleMat);
+    handle.position.set(0.18, 0.05, 0.025);
+    panel.add(handle);
+
+    const darkSlitMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.1, roughness: 0.8 });
     for (let i = 0; i < 3; i++) {
-      const slit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.025, 0.02), steelMat);
-      slit.position.set(0, 1.65 - i * 0.04, 0.21);
-      lg.add(slit);
+      const slit = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.012, 0.005), darkSlitMat);
+      slit.position.set(0, 0.7 - i * 0.03, 0.011);
+      panel.add(slit);
     }
+
+    let isOpen = false;
+    let currentAngle = 0;
+    let targetAngle = 0;
+
+    const lockerItem = {
+      mesh: panel,
+      name: 'Crew Locker',
+      get prompt() {
+        return isOpen ? 'F: Close Locker' : 'F: Open Locker';
+      },
+      onInteract: () => {
+        isOpen = !isOpen;
+        targetAngle = isOpen ? Math.PI * -0.65 : 0.0;
+        console.log(`[Tiamat] Locker open state: ${isOpen}`);
+      }
+    };
+    interactables.push(lockerItem);
+
+    lockerUpdates.push((delta) => {
+      const diff = targetAngle - currentAngle;
+      if (Math.abs(diff) > 0.001) {
+        currentAngle += diff * Math.min(1, 8 * delta);
+        doorPivot.rotation.y = currentAngle;
+      } else {
+        currentAngle = targetAngle;
+        doorPivot.rotation.y = currentAngle;
+      }
+    });
 
     boxes.push(new THREE.Box3().setFromCenterAndSize(
       new THREE.Vector3(lx, 0.9, lz),
-      new THREE.Vector3(0.4, 1.8, 0.5)
+      new THREE.Vector3(0.5, 1.8, 0.4)
     ));
   };
 
@@ -583,8 +775,13 @@ function createQuartersFurniture(scene, boxes) {
   };
 
   buildTable(4.1, -17.5, +1);
-
   buildTable(4.1, -8.5, -1);
+
+  return {
+    updateLocker: (delta) => {
+      lockerUpdates.forEach(update => update(delta));
+    }
+  };
 }
 
 
@@ -687,6 +884,8 @@ function createGenerator(scene, boxes) {
     bumpScale: 0.012,
     roughnessMap: createGeneratorRoughnessMap(),
     metalnessMap: createGeneratorMetalnessMap(),
+    normalMap: createGeneratorNormalMap(),
+    normalScale: new THREE.Vector2(1.0, 1.0),
     color: 0xbbbbbb,
     metalness: 1.0,
     roughness: 1.0,
@@ -811,7 +1010,7 @@ function createBridgeConsoles(scene, boxes) {
   const neonMat = (colorHex) => new THREE.MeshStandardMaterial({
     color: 0x000000,
     emissive: new THREE.Color(colorHex),
-    emissiveIntensity: 1.5,
+    emissiveIntensity: 0.0,
     metalness: 0.0,
     roughness: 0.5,
   });
@@ -834,6 +1033,7 @@ function createBridgeConsoles(scene, boxes) {
 
   const screenPositions = [-1.5, 1.5];
   const screenColors = [0x00ffcc, 0xff3366];
+  const materials = [];
   
   screenPositions.forEach((sx, idx) => {
     const scrGroup = new THREE.Group();
@@ -845,10 +1045,21 @@ function createBridgeConsoles(scene, boxes) {
     frame.position.y = 0.25;
     scrGroup.add(frame);
 
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.42), neonMat(screenColors[idx]));
+    const mat = neonMat(screenColors[idx]);
+    materials.push(mat);
+
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.42), mat);
     screen.position.set(0, 0.25, 0.041);
     scrGroup.add(screen);
   });
+
+  return {
+    updateScreens: (powerRestored) => {
+      materials.forEach(mat => {
+        mat.emissiveIntensity = powerRestored ? 1.5 : 0.0;
+      });
+    }
+  };
 }
 
 
@@ -940,6 +1151,7 @@ function createJournalPages(scene, interactables, hud, movement) {
 
   const pages = [
     {
+      id: 'captain',
       x: 5.9, y: 0.81, z: -19.5,
       rotY: 0.12,
       title: "Captain's Log — May 24, 2026",
@@ -949,6 +1161,7 @@ The engine pressure has been failing consistently. The auxiliary generator on th
 I've locked the East corridor bulkheads to contain the noise from Section 4. They've been screaming all night. The quarantine must hold.`
     },
     {
+      id: 'engineer',
       x: -4.5, y: 0.91, z: -11.0,
       rotY: -0.3,
       title: "Engineer's Notes — Restoring Power",
@@ -960,6 +1173,7 @@ I've locked the East corridor bulkheads to contain the noise from Section 4. The
 If Section 4 breaks loose, may God help us.`
     },
     {
+      id: 'bridge',
       x: -6.0, y: 0.91, z: 7.35,
       rotY: 0.2,
       title: "Bridge Log — System Lockdown",
@@ -969,17 +1183,30 @@ The escape hatch control panel requires a final color-sequence synchronization c
 The security protocols require the primary breaker coil to remain locked. If the breaker is pulled, it will trigger an automatic release of the quarantine lock doors. The madness must not spread to the bridge.`
     },
     {
+      id: 'manifest',
       x: 5.6, y: 0.69, z: -9.1,
       rotY: 1,
-      title: "Crew Manifest Note — Bunk 3",
+      title: "Crew Manifest Note",
       text: `DAY 19 ABOARD TIAMAT.
-Something is wrong with the men in Section 4. They stopped eating three days ago. The sounds they make don't sound human anymore.
+Something is wrong with the men in Section 4. They stopped eating three days ago. The sounds they make don't sound human anymore. I can hear them scratching the bulkhead from the inside.
 
-I barricaded my bunk with the locker door. I can hear them scratching the bulkhead from the inside.
-
-I left my magnesium rations and the regulator wheel on my bunk. Whoever finds this — take them. You'll need to stay sharp.
+I couldn't leave the regulator wheel exposed. It's not safe to leave anything out in the open.
 
 — Machinist Yılmaz`
+    },
+    {
+      id: 'medical',
+      x: -3.9, y: 0.91, z: -15.0,
+      rotY: 0.4,
+      title: "Medical Memo — Sanity & Rations",
+      text: `MEMORANDUM FOR ALL TIAMAT CREW.
+Due to prolonged deep-sea quarantine, symptoms of severe acute panic and psychological degradation have been reported across Section 4.
+
+Emergency Magnesium tablet rations have been placed at crew tables and consoles. Using these rations will temporarily steady your nerves when the darkness or claustrophobia gets too intense.
+
+WARNING: Our medical supplies are extremely limited. Do not consume them unless absolutely necessary when you feel your mind slipping. You'll need to stay sharp.
+
+— Dr. Aris, Chief Medical Officer`
     }
   ];
 
@@ -998,6 +1225,11 @@ I left my magnesium rations and the regulator wheel on my bunk. Whoever finds th
         hud.showJournal(p.title, p.text, () => {
           movement.controls.lock();
         });
+
+        if (p.id) {
+          state.readNotes[p.id] = true;
+          console.log(`[Tiamat] Note read: ${p.id}`);
+        }
 
         document.exitPointerLock();
       }
@@ -1059,7 +1291,8 @@ function createPressureValveWheel(scene, interactables, hud) {
   });
 
   const wheelGroup = new THREE.Group();
-  wheelGroup.position.set(5.6, 0.75, -9.4);
+  wheelGroup.position.set(1.8, 0.92, -15.0);
+  wheelGroup.rotation.x = Math.PI / 2;
   scene.add(wheelGroup);
 
   const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.04, 16), steelMat);

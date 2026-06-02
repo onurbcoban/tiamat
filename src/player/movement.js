@@ -58,7 +58,7 @@ export function createMovement(camera, collidableBoxes, domElement) {
     const fl = camera.children.find(c => c.isSpotLight);
     if (fl) {
       if (keys['KeyQ']) fl.intensity = Math.max(0,  fl.intensity - 4 * delta);
-      if (keys['KeyE']) fl.intensity = Math.min(10, fl.intensity + 4 * delta);
+      if (keys['KeyE']) fl.intensity = Math.min(20, fl.intensity + 4 * delta);
 
       if (state.sanity < 40 && !state.isDead) {
         const t = Date.now() * 0.001;

@@ -406,17 +406,17 @@ export function createPressurePuzzle(scene, interactables) {
   function drawFace(ctx, val, statusStr, stableTime) {
     const W = 256, H = 256, cx = 128, cy = 128;
 
+    ctx.clearRect(0, 0, W, H);
+
     ctx.fillStyle = '#09121a';
     ctx.beginPath();
-    ctx.arc(cx, cy, 110, Math.PI, 0, false);
-    ctx.lineTo(cx, cy);
-    ctx.closePath();
+    ctx.arc(cx, cy, 110, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.strokeStyle = '#1d3547';
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(cx, cy, 110, Math.PI, 0, false);
+    ctx.arc(cx, cy, 110, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.beginPath();

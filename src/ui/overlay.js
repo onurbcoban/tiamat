@@ -13,6 +13,8 @@ export function createOverlay(onStart) {
       <div class="ctrl-row"><span class="key">Q / E</span><span>Flashlight Brightness</span></div>
       <div class="ctrl-row"><span class="key">F</span><span>Interaction (valves, gauge)</span></div>
       <div class="ctrl-row"><span class="key">CLICK</span><span>Simon Says Panel</span></div>
+      <div class="ctrl-row"><span class="key">O</span><span>Objectives Sheet</span></div>
+      <div class="ctrl-row"><span class="key">H</span><span>Use Magnesium (Restore Sanity)</span></div>
     </div>
 
     <button id="start-btn">START</button>

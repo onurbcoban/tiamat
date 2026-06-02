@@ -1,6 +1,56 @@
 import * as THREE from 'three';
 import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
 
+export function createNormalMap(sourceCanvas, intensity = 1.0) {
+  const width = sourceCanvas.width;
+  const height = sourceCanvas.height;
+  const srcCtx = sourceCanvas.getContext('2d');
+  const srcData = srcCtx.getImageData(0, 0, width, height).data;
+
+  const normalCanvas = document.createElement('canvas');
+  normalCanvas.width = width;
+  normalCanvas.height = height;
+  const normCtx = normalCanvas.getContext('2d');
+  const normData = normCtx.createImageData(width, height);
+  const data = normData.data;
+
+  function getHeight(x, y) {
+    const cx = Math.max(0, Math.min(width - 1, x));
+    const cy = Math.max(0, Math.min(height - 1, y));
+    const idx = (cy * width + cx) * 4;
+    return (srcData[idx] + srcData[idx + 1] + srcData[idx + 2]) / 3.0;
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const hL = getHeight(x - 1, y);
+      const hR = getHeight(x + 1, y);
+      const hT = getHeight(x, y - 1);
+      const hB = getHeight(x, y + 1);
+
+      const dX = ((hR - hL) / 255.0) * intensity;
+      const dY = ((hB - hT) / 255.0) * intensity;
+
+      const len = Math.sqrt(dX * dX + dY * dY + 1.0);
+      const nx = -dX / len;
+      const ny = -dY / len;
+      const nz = 1.0 / len;
+
+      const idx = (y * width + x) * 4;
+      data[idx]     = Math.floor((nx * 0.5 + 0.5) * 255);
+      data[idx + 1] = Math.floor((ny * 0.5 + 0.5) * 255);
+      data[idx + 2] = Math.floor((nz * 0.5 + 0.5) * 255);
+      data[idx + 3] = 255;
+    }
+  }
+
+  normCtx.putImageData(normData, 0, 0);
+  const texture = new THREE.CanvasTexture(normalCanvas);
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
 function drawOrganicRust(ctx, width, height, type) {
   const simplex = new SimplexNoise();
   const imgData = ctx.getImageData(0, 0, width, height);
@@ -354,7 +404,7 @@ export function createDoorTexture() {
   }
 
   // Draw organic simplex noise-based rust layer (much more realistic than simple circles)
-  drawOrganicRust(ctx, 512, 1024, 'color');
+  // drawOrganicRust(ctx, 512, 1024, 'color');
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
@@ -701,7 +751,7 @@ export function createDoorRoughnessMap() {
   ctx.strokeRect(36, 36, 440, 952);
 
   // Apply organic noise-based rust to roughness map
-  drawOrganicRust(ctx, 512, 1024, 'roughness');
+  // drawOrganicRust(ctx, 512, 1024, 'roughness');
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
@@ -725,11 +775,135 @@ export function createDoorMetalnessMap() {
   ctx.fillRect(512 - 32, 0, 32, 1024);
 
   // Apply organic noise-based rust to metalness map
-  drawOrganicRust(ctx, 512, 1024, 'metalness');
+  // drawOrganicRust(ctx, 512, 1024, 'metalness');
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   return texture;
 }
+
+export function createDoorNormalMap() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+  
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, 512, 1024);
+  
+  ctx.strokeStyle = '#303030';
+  ctx.lineWidth = 12;
+  ctx.strokeRect(36, 36, 440, 952);
+  
+  ctx.strokeStyle = '#d0d0d0';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(42, 42, 428, 940);
+  
+  ctx.strokeStyle = '#303030';
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.moveTo(36, 341); ctx.lineTo(476, 341);
+  ctx.moveTo(36, 682); ctx.lineTo(476, 682);
+  ctx.stroke();
+  
+  ctx.strokeStyle = '#d0d0d0';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(36, 346); ctx.lineTo(476, 346);
+  ctx.moveTo(36, 687); ctx.lineTo(476, 687);
+  ctx.stroke();
+
+  for (let i = 0; i < 4000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 1024;
+    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  const texture = createNormalMap(canvas, 2.0);
+  return texture;
+}
+
+export function createGeneratorNormalMap() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, 512, 256);
+  
+  ctx.strokeStyle = '#303030';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(128, 0); ctx.lineTo(128, 256);
+  ctx.moveTo(256, 0); ctx.lineTo(256, 256);
+  ctx.moveTo(384, 0); ctx.lineTo(384, 256);
+  ctx.moveTo(0, 128); ctx.lineTo(512, 128);
+  ctx.stroke();
+  
+  ctx.strokeStyle = '#d0d0d0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(129, 0); ctx.lineTo(129, 256);
+  ctx.moveTo(257, 0); ctx.lineTo(257, 256);
+  ctx.moveTo(385, 0); ctx.lineTo(385, 256);
+  ctx.moveTo(0, 129); ctx.lineTo(512, 129);
+  ctx.stroke();
+  
+  for (let i = 0; i < 3000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 256;
+    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  const texture = createNormalMap(canvas, 1.8);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+export function createRustMetalNormalMap() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, 512, 512);
+  
+  ctx.strokeStyle = '#404040';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(0, 0, 512, 512);
+  
+  ctx.beginPath();
+  ctx.moveTo(256, 0); ctx.lineTo(256, 512);
+  ctx.moveTo(0, 256); ctx.lineTo(512, 256);
+  ctx.stroke();
+  
+  ctx.strokeStyle = '#c0c0c0';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(3, 3, 506, 506);
+  
+  ctx.beginPath();
+  ctx.moveTo(258, 0); ctx.lineTo(258, 512);
+  ctx.moveTo(0, 258); ctx.lineTo(512, 258);
+  ctx.stroke();
+
+  for (let i = 0; i < 3000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  const texture = createNormalMap(canvas, 1.5);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.anisotropy = 4;
+  return texture;
+}
+
 

@@ -20,15 +20,18 @@ export function createLights(scene, camera) {
   scene.add(emergencyGroup);
 
   const redLightPositions = [
-    { x: 4.0,  y: 3.0,  z: -22.0 },
-    { x: -4.5, y: 3.0,  z: -13.0 },
-    { x: 4.5,  y: 3.0,  z: -13.0 },
-    { x: 0.0,  y: 3.0,  z: -20.0 },
-    { x: 0.0,  y: 3.0,  z: -8.0  },
-    { x: 0.0,  y: 3.0,  z: 2.0   },
-    { x: 0.0,  y: -1.0, z: 3.0   },
-    { x: -6.5, y: -1.0, z: 5.0   },
-    { x: -6.5, y: 3.0,  z: 5.0   },
+    { x: 4.0,  y: 3.0,  z: -22.0 }, // Cabin
+    { x: -4.5, y: 3.0,  z: -13.0 }, // Mess Hall
+    { x: 4.5,  y: 3.0,  z: -13.0 }, // Quarters
+    { x: 0.0,  y: 3.0,  z: -23.0 }, // Corridor 1 (back)
+    { x: 0.0,  y: 3.0,  z: -17.0 }, // Corridor 2
+    { x: 0.0,  y: 3.0,  z: -11.0 }, // Corridor 3 (mid back)
+    { x: 0.0,  y: 3.0,  z: -5.0  }, // Corridor 4 (mid front)
+    { x: 0.0,  y: 3.0,  z: 1.0   }, // Corridor 5
+    { x: 0.0,  y: 3.0,  z: 6.0   }, // Corridor 6 (front)
+    { x: 0.0,  y: -1.0, z: 3.0   }, // Flooded Room (lower deck)
+    { x: -6.5, y: -1.0, z: 5.0   }, // Generator Room (lower deck)
+    { x: -6.5, y: 3.0,  z: 5.0   }, // Bridge
   ];
 
   const bulbMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
@@ -99,22 +102,22 @@ export function createLights(scene, camera) {
     mainLightsGroup.add(bulb);
   });
 
-  const flashlight = new THREE.SpotLight(0xd0e8ff, 9.0);
+  const flashlight = new THREE.SpotLight(0xd0e8ff, 14.0);
   flashlight.position.set(0.3, -0.25, -0.1);
   flashlight.angle    = Math.PI / 4.5;
   flashlight.penumbra = 0.5;
   flashlight.decay    = 1.8;
   flashlight.distance = 40;
   flashlight.castShadow = true;
-  flashlight.shadow.mapSize.width = 1024;
-  flashlight.shadow.mapSize.height = 1024;
+  flashlight.shadow.mapSize.width = 2048;
+  flashlight.shadow.mapSize.height = 2048;
   flashlight.shadow.camera.near = 0.5;
   flashlight.shadow.camera.far = 40;
-  flashlight.shadow.bias = -0.001;
+  flashlight.shadow.bias = -0.0003;
   camera.add(flashlight);
   camera.add(flashlight.target);
   flashlight.target.position.set(0, 0, -15);
- 
+  
   const spillLight = new THREE.SpotLight(0xd0e8ff, 0.15);
   spillLight.angle    = Math.PI / 2.0;
   spillLight.penumbra = 1.0;
@@ -122,8 +125,8 @@ export function createLights(scene, camera) {
   spillLight.distance = 8.0; // Localized to 8 meters
   flashlight.add(spillLight);
   spillLight.target = flashlight.target;
- 
-  let currentIntensity = 9.0;
+  
+  let currentIntensity = 14.0;
   Object.defineProperty(flashlight, 'intensity', {
     get: () => currentIntensity,
     set: (val) => {
@@ -160,7 +163,7 @@ export function createLights(scene, camera) {
     const maxOffDist = 12.0;
     const maxIntensity = 18.0;
 
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < redLightPositions.length; i++) {
       const pl = mainLightsGroup.children[i * 3];
       const socket = mainLightsGroup.children[i * 3 + 1];
       const bulb = mainLightsGroup.children[i * 3 + 2];

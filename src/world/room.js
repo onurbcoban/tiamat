@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createRustMetalTexture, createDoorTexture, createIronFrameTexture, createWheelTexture, createDoorRoughnessMap, createDoorMetalnessMap } from './textures.js';
+import { createRustMetalTexture, createRustMetalNormalMap, createDoorTexture, createIronFrameTexture, createWheelTexture, createDoorRoughnessMap, createDoorMetalnessMap, createWoodTexture } from './textures.js';
 
 const CEIL_H = 3.2;
 const MID_Y  = CEIL_H / 2;
@@ -12,15 +12,19 @@ const rustTexture = createRustMetalTexture();
 // Repeat texture so it looks fine on walls and floors
 rustTexture.repeat.set(2, 2);
 
-const matFloor = new THREE.MeshStandardMaterial({ map: rustTexture, color: 0x222a30, metalness: 0.60, roughness: 0.70 });
-const matCeil  = new THREE.MeshStandardMaterial({ map: rustTexture, color: 0x151c22, metalness: 0.40, roughness: 0.90 });
-export const matWallCabin     = new THREE.MeshStandardMaterial({ map: rustTexture, color: 0x222a32, metalness: 0.45, roughness: 0.75, side: THREE.DoubleSide });
-export const matWallMess      = new THREE.MeshStandardMaterial({ map: rustTexture, color: 0x222a32, metalness: 0.45, roughness: 0.78, side: THREE.DoubleSide });
-export const matWallCorridor  = new THREE.MeshStandardMaterial({ map: rustTexture, color: 0x222a32, metalness: 0.50, roughness: 0.72, side: THREE.DoubleSide });
-export const matWallQuarters  = new THREE.MeshStandardMaterial({ map: rustTexture, color: 0x222a32, metalness: 0.45, roughness: 0.75, side: THREE.DoubleSide });
-export const matWallFlooded   = new THREE.MeshStandardMaterial({ map: rustTexture, color: 0x3a2c20, metalness: 0.35, roughness: 0.85, side: THREE.DoubleSide });
-export const matWallGenerator = new THREE.MeshStandardMaterial({ map: rustTexture, color: 0x25272a, metalness: 0.55, roughness: 0.68, side: THREE.DoubleSide });
-export const matWallBridge    = new THREE.MeshStandardMaterial({ map: rustTexture, color: 0x25303b, metalness: 0.55, roughness: 0.65, side: THREE.DoubleSide });
+const rustNormalMap = createRustMetalNormalMap();
+rustNormalMap.repeat.set(2, 2);
+
+const matFloor = new THREE.MeshStandardMaterial({ map: rustTexture, normalMap: rustNormalMap, normalScale: new THREE.Vector2(1.0, 1.0), color: 0x222a30, metalness: 0.60, roughness: 0.70 });
+const matCeil  = new THREE.MeshStandardMaterial({ map: rustTexture, normalMap: rustNormalMap, normalScale: new THREE.Vector2(1.0, 1.0), color: 0x151c22, metalness: 0.40, roughness: 0.90 });
+export const matWallCabin     = new THREE.MeshStandardMaterial({ map: rustTexture, normalMap: rustNormalMap, normalScale: new THREE.Vector2(1.0, 1.0), color: 0x222a32, metalness: 0.45, roughness: 0.75, side: THREE.DoubleSide });
+export const matWallMess      = new THREE.MeshStandardMaterial({ map: rustTexture, normalMap: rustNormalMap, normalScale: new THREE.Vector2(1.0, 1.0), color: 0x222a32, metalness: 0.45, roughness: 0.78, side: THREE.DoubleSide });
+export const matWallCorridor  = new THREE.MeshStandardMaterial({ map: rustTexture, normalMap: rustNormalMap, normalScale: new THREE.Vector2(1.0, 1.0), color: 0x222a32, metalness: 0.50, roughness: 0.72, side: THREE.DoubleSide });
+export const matWallQuarters  = new THREE.MeshStandardMaterial({ map: rustTexture, normalMap: rustNormalMap, normalScale: new THREE.Vector2(1.0, 1.0), color: 0x222a32, metalness: 0.45, roughness: 0.75, side: THREE.DoubleSide });
+export const matWallFlooded   = new THREE.MeshStandardMaterial({ map: rustTexture, normalMap: rustNormalMap, normalScale: new THREE.Vector2(1.0, 1.0), color: 0x3a2c20, metalness: 0.35, roughness: 0.85, side: THREE.DoubleSide });
+export const matWallGenerator = new THREE.MeshStandardMaterial({ map: rustTexture, normalMap: rustNormalMap, normalScale: new THREE.Vector2(1.0, 1.0), color: 0x25272a, metalness: 0.55, roughness: 0.68, side: THREE.DoubleSide });
+export const matWallBridge    = new THREE.MeshStandardMaterial({ map: rustTexture, normalMap: rustNormalMap, normalScale: new THREE.Vector2(1.0, 1.0), color: 0x25303b, metalness: 0.55, roughness: 0.65, side: THREE.DoubleSide });
+
 
 const matDoorFrame = new THREE.MeshStandardMaterial({ color: 0x0f1317, metalness: 0.65, roughness: 0.60 });
 
@@ -337,16 +341,12 @@ function buildMadRoomDoor(scene, b) {
   const doorX = 1.5;
   const doorZ = 0;
   
-  const doorTex = createDoorTexture();
+  const woodTex = createWoodTexture();
   const doorMat = new THREE.MeshStandardMaterial({
-    map: doorTex,
-    bumpMap: doorTex,
-    bumpScale: 0.016,
-    roughnessMap: createDoorRoughnessMap(),
-    metalnessMap: createDoorMetalnessMap(),
+    map: woodTex,
     color: 0x5a4a3b,
-    metalness: 1.0,
-    roughness: 1.0,
+    metalness: 0.0,
+    roughness: 0.88,
   });
   
   const frameMat = new THREE.MeshStandardMaterial({
@@ -396,6 +396,26 @@ function buildMadRoomDoor(scene, b) {
       rib.castShadow = true;
       rib.receiveShadow = true;
       doorGroup.add(rib);
+    });
+  });
+
+  const rivetGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.012, 8);
+  rivetGeo.rotateZ(Math.PI / 2);
+  const rivetMat = new THREE.MeshStandardMaterial({
+    color: 0x2c3b48,
+    metalness: 0.80,
+    roughness: 0.35,
+  });
+
+  ribXOffsets.forEach(xOff => {
+    ribYPositions.forEach(yPos => {
+      for (let zOffset = -0.8; zOffset <= 0.8; zOffset += 0.4) {
+        const rivet = new THREE.Mesh(rivetGeo, rivetMat);
+        rivet.position.set(doorX + xOff + (xOff > 0 ? 0.006 : -0.006), yPos, doorZ + zOffset);
+        rivet.castShadow = true;
+        rivet.receiveShadow = true;
+        doorGroup.add(rivet);
+      }
     });
   });
 

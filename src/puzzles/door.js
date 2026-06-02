@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
-import { createDoorTexture, createIronFrameTexture, createDoorRoughnessMap, createDoorMetalnessMap } from '../world/textures.js';
+import { createDoorTexture, createIronFrameTexture, createDoorRoughnessMap, createDoorMetalnessMap, createDoorNormalMap } from '../world/textures.js';
 
 const WALL_X      = -11.40;
 const HINGE_Z     = 6.0;
@@ -30,6 +30,8 @@ export function createDoor(scene, interactables, collidableBoxes, onEscape) {
     bumpScale: 0.016,
     roughnessMap: createDoorRoughnessMap(),
     metalnessMap: createDoorMetalnessMap(),
+    normalMap: createDoorNormalMap(),
+    normalScale: new THREE.Vector2(1.0, 1.0),
     color: 0x667686,
     metalness: 1.0,
     roughness: 1.0,
@@ -44,25 +46,39 @@ export function createDoor(scene, interactables, collidableBoxes, onEscape) {
   doorMesh.receiveShadow = true;
   pivot.add(doorMesh);
 
-  // Add physical horizontal structural reinforcement ribs/beams (3D texture relief)
-  const ribMat = new THREE.MeshStandardMaterial({
-    color: 0x3a424a,
-    metalness: 0.65,
-    roughness: 0.50,
+
+
+  const rivetGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.012, 8);
+  rivetGeo.rotateX(Math.PI / 2);
+  const rivetMat = new THREE.MeshStandardMaterial({
+    color: 0x4a5560,
+    metalness: 0.85,
+    roughness: 0.25,
   });
-  const ribGeo = new THREE.BoxGeometry(DOOR_W - 0.1, 0.08, 0.022);
-  const ribZOffsets = [0.072, -0.072]; // Front and back faces of the door
-  const ribYPositions = [DOOR_H * 0.22, DOOR_H * 0.42, DOOR_H * 0.78];
-  
-  ribZOffsets.forEach(zOff => {
-    ribYPositions.forEach(yPos => {
-      const rib = new THREE.Mesh(ribGeo, ribMat);
-      rib.position.set(DOOR_W / 2, yPos, zOff);
-      rib.castShadow = true;
-      rib.receiveShadow = true;
-      pivot.add(rib);
-    });
-  });
+
+  const addExitDoorRivets = (faceZ) => {
+    for (let x = 0.1; x <= DOOR_W - 0.1; x += 0.2) {
+      [0.1, DOOR_H - 0.1].forEach(y => {
+        const rivet = new THREE.Mesh(rivetGeo, rivetMat);
+        rivet.position.set(x, y, faceZ);
+        rivet.castShadow = true;
+        rivet.receiveShadow = true;
+        pivot.add(rivet);
+      });
+    }
+    for (let y = 0.3; y <= DOOR_H - 0.3; y += 0.2) {
+      [0.1, DOOR_W - 0.1].forEach(x => {
+        const rivet = new THREE.Mesh(rivetGeo, rivetMat);
+        rivet.position.set(x, y, faceZ);
+        rivet.castShadow = true;
+        rivet.receiveShadow = true;
+        pivot.add(rivet);
+      });
+    }
+  };
+
+  addExitDoorRivets(0.075);
+  addExitDoorRivets(-0.075);
 
   // Center watertight door round wheel handle (rotatable look)
   const wheelMat = new THREE.MeshStandardMaterial({
