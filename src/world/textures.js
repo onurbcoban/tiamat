@@ -51,82 +51,6 @@ export function createNormalMap(sourceCanvas, intensity = 1.0) {
   return texture;
 }
 
-function drawOrganicRust(ctx, width, height, type) {
-  const simplex = new SimplexNoise();
-  const imgData = ctx.getImageData(0, 0, width, height);
-  const data = imgData.data;
-
-  for (let y = 0; y < height; y++) {
-    const normY = y / height;
-    for (let x = 0; x < width; x++) {
-      const normX = x / width;
-      
-      let noiseVal = 0;
-      let amp = 1.0;
-      let freq = 1.0;
-      let maxAmp = 0;
-      for (let o = 0; o < 4; o++) {
-        noiseVal += simplex.noise(normX * 10.0 * freq, normY * 20.0 * freq) * amp;
-        maxAmp += amp;
-        amp *= 0.5;
-        freq *= 2.0;
-      }
-      noiseVal = (noiseVal / maxAmp + 1.0) / 2.0;
-
-      // Rust is splotchy, not a solid gradient
-      const bottomAccum = Math.pow(normY, 4.5) * 0.65;
-      const edgeAccum = (Math.pow(1.0 - normX, 6.0) + Math.pow(normX, 6.0)) * 0.35;
-      
-      const distToVerticalSeam = Math.min(Math.abs(normX - 0.07), Math.abs(normX - 0.93));
-      const distToHorizontalSeam = Math.min(Math.abs(normY - 0.035), Math.abs(normY - 0.965));
-      const seamFactor = Math.exp(-Math.pow(Math.min(distToVerticalSeam, distToHorizontalSeam) * 18.0, 2.0)) * 0.3;
-
-      const baseRustChance = noiseVal * 0.32 + (bottomAccum + edgeAccum + seamFactor) * (0.2 + 0.8 * noiseVal);
-      
-      // Sparse rust threshold
-      const rustThreshold = 0.48;
-
-      if (baseRustChance > rustThreshold) {
-        const t = Math.min(1.0, (baseRustChance - rustThreshold) / 0.35);
-        const a = Math.floor(Math.min(0.85, (baseRustChance - rustThreshold) * 3.0) * 255);
-
-        const idx = (y * width + x) * 4;
-
-        if (type === 'color') {
-          // Organic dark iron oxide brown to detailed rust orange
-          const r = Math.floor(65 * (1 - t) + 130 * t);
-          const g = Math.floor(28 * (1 - t) + 55 * t);
-          const b = Math.floor(10 * (1 - t) + 14 * t);
-
-          const baseR = data[idx];
-          const baseG = data[idx + 1];
-          const baseB = data[idx + 2];
-          const alphaNorm = a / 255;
-
-          data[idx] = Math.floor(baseR * (1 - alphaNorm) + r * alphaNorm);
-          data[idx + 1] = Math.floor(baseG * (1 - alphaNorm) + g * alphaNorm);
-          data[idx + 2] = Math.floor(baseB * (1 - alphaNorm) + b * alphaNorm);
-        } else if (type === 'roughness') {
-          const roughnessVal = Math.floor((0.75 + t * 0.2) * 255);
-          const baseRoughness = data[idx];
-          const alphaNorm = a / 255;
-          data[idx] = Math.floor(baseRoughness * (1 - alphaNorm) + roughnessVal * alphaNorm);
-          data[idx + 1] = data[idx];
-          data[idx + 2] = data[idx];
-        } else if (type === 'metalness') {
-          const metalnessVal = 0;
-          const baseMetalness = data[idx];
-          const alphaNorm = a / 255;
-          data[idx] = Math.floor(baseMetalness * (1 - alphaNorm) + metalnessVal * alphaNorm);
-          data[idx + 1] = data[idx];
-          data[idx + 2] = data[idx];
-        }
-      }
-    }
-  }
-
-  ctx.putImageData(imgData, 0, 0);
-}
 
 /**
  * Procedural Canvas Texture Generators for Escape from Tiamat.
@@ -402,9 +326,6 @@ export function createDoorTexture() {
     ctx.lineTo(512 - stripeW, y + 24);
     ctx.fill();
   }
-
-  // Draw organic simplex noise-based rust layer (much more realistic than simple circles)
-  // drawOrganicRust(ctx, 512, 1024, 'color');
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
@@ -750,9 +671,6 @@ export function createDoorRoughnessMap() {
   ctx.lineWidth = 8;
   ctx.strokeRect(36, 36, 440, 952);
 
-  // Apply organic noise-based rust to roughness map
-  // drawOrganicRust(ctx, 512, 1024, 'roughness');
-
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
@@ -773,9 +691,6 @@ export function createDoorMetalnessMap() {
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, 32, 1024);
   ctx.fillRect(512 - 32, 0, 32, 1024);
-
-  // Apply organic noise-based rust to metalness map
-  // drawOrganicRust(ctx, 512, 1024, 'metalness');
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
@@ -900,6 +815,46 @@ export function createRustMetalNormalMap() {
   }
 
   const texture = createNormalMap(canvas, 1.5);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+export function createWaterNormalMap() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, 256, 256);
+
+  const simplex = new SimplexNoise();
+  const imgData = ctx.getImageData(0, 0, 256, 256);
+  const data = imgData.data;
+
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      const nx = x / 256;
+      const ny = y / 256;
+      
+      const w1 = Math.sin(nx * Math.PI * 8.0) * Math.cos(ny * Math.PI * 8.0);
+      const w2 = Math.sin((nx + ny) * Math.PI * 12.0) * 0.5;
+      const noise = simplex.noise(nx * 5.0, ny * 5.0) * 0.3;
+      
+      const heightVal = Math.floor((0.5 + (w1 + w2 + noise) * 0.25) * 255);
+      
+      const idx = (y * 256 + x) * 4;
+      data[idx] = heightVal;
+      data[idx+1] = heightVal;
+      data[idx+2] = heightVal;
+      data[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  const texture = createNormalMap(canvas, 1.2);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.anisotropy = 4;

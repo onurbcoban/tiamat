@@ -1,5 +1,49 @@
 import * as THREE from 'three';
 import { state } from '../core/state.js';
+
+const volumetricVertexShader = `
+  varying vec3 vNormal;
+  varying vec3 vViewPosition;
+  varying vec2 vUv;
+  varying float vDepth;
+  
+  void main() {
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
+    vNormal = normalize(normalMatrix * normal);
+    vViewPosition = -mvPosition.xyz;
+    vUv = uv;
+    vDepth = -mvPosition.z;
+  }
+`;
+
+const volumetricFragmentShader = `
+  varying vec3 vNormal;
+  varying vec3 vViewPosition;
+  varying vec2 vUv;
+  varying float vDepth;
+  
+  uniform vec3 color;
+  uniform float opacity;
+  uniform float intensity;
+  
+  void main() {
+    vec3 normal = normalize(vNormal);
+    vec3 viewDir = normalize(vViewPosition);
+    
+    float edgeFade = dot(normal, viewDir);
+    edgeFade = smoothstep(0.0, 0.45, abs(edgeFade));
+    
+    float distanceFade = 1.0 - vUv.y;
+    distanceFade = pow(distanceFade, 2.5);
+    
+    float nearFade = smoothstep(0.1, 1.2, vDepth);
+    
+    float finalAlpha = edgeFade * distanceFade * nearFade * opacity * intensity;
+    
+    gl_FragColor = vec4(color, finalAlpha);
+  }
+`;
  
 export function createLights(scene, camera) {
   const ambient = new THREE.AmbientLight(0x7a8fa5, 1.1);
@@ -102,7 +146,7 @@ export function createLights(scene, camera) {
     mainLightsGroup.add(bulb);
   });
 
-  const flashlight = new THREE.SpotLight(0xd0e8ff, 14.0);
+  const flashlight = new THREE.SpotLight(0xd0e8ff, 5.0);
   flashlight.position.set(0.3, -0.25, -0.1);
   flashlight.angle    = Math.PI / 4.5;
   flashlight.penumbra = 0.5;
@@ -121,44 +165,63 @@ export function createLights(scene, camera) {
   const spillLight = new THREE.SpotLight(0xd0e8ff, 0.15);
   spillLight.angle    = Math.PI / 2.0;
   spillLight.penumbra = 1.0;
-  spillLight.decay    = 3.0; // Faster decay to avoid lighting distant walls
-  spillLight.distance = 8.0; // Localized to 8 meters
+  spillLight.decay    = 3.0;
+  spillLight.distance = 8.0;
   flashlight.add(spillLight);
   spillLight.target = flashlight.target;
   
-  let currentIntensity = 14.0;
+  const coneGeo = new THREE.CylinderGeometry(0.02, 2.4, 12.0, 16, 1, true);
+  coneGeo.translate(0, -6.0, 0);
+  const coneMat = new THREE.ShaderMaterial({
+    vertexShader: volumetricVertexShader,
+    fragmentShader: volumetricFragmentShader,
+    uniforms: {
+      color: { value: new THREE.Color(0x6ba4d8) },
+      opacity: { value: 0.15 },
+      intensity: { value: 1.0 }
+    },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide
+  });
+  const volumetricCone = new THREE.Mesh(coneGeo, coneMat);
+  volumetricCone.rotation.x = Math.PI / 2;
+  volumetricCone.name = "volumetricCone";
+  volumetricCone.visible = false;
+  flashlight.add(volumetricCone);
+  
+  let currentIntensity = 5.0;
   Object.defineProperty(flashlight, 'intensity', {
     get: () => currentIntensity,
     set: (val) => {
       currentIntensity = val;
-      spillLight.intensity = val * 0.08; // 8% of flashlight brightness
+      spillLight.intensity = val * 0.08;
+      coneMat.uniforms.intensity.value = val / 5.0;
     },
     configurable: true,
     enumerable: true
   });
  
-  // Keep spillLight visibility synchronized with flashlight visibility
   let currentVisible = true;
   Object.defineProperty(flashlight, 'visible', {
     get: () => currentVisible,
     set: (val) => {
       currentVisible = val;
       spillLight.visible = val;
+      volumetricCone.visible = val && state.isSwimming;
     },
     configurable: true,
     enumerable: true
   });
  
   const updateRoomLights = (pos, powerRestored) => {
+    volumetricCone.visible = currentVisible && state.isSwimming;
+
     if (!powerRestored || state.flickerActive) {
-      // If power is not restored or flickering is in progress, do not override
       return;
     }
 
-    // Smoothly calculate intensities based on distance to the player (Yöntem 2)
-    // d < 6.0m: fully on (18.0)
-    // d > 12.0m: fully off (0.0)
-    // 6.0m <= d <= 12.0m: smoothly interpolated
     const minOnDist = 6.0;
     const maxOffDist = 12.0;
     const maxIntensity = 18.0;

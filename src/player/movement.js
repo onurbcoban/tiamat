@@ -22,6 +22,7 @@ export function createMovement(camera, collidableBoxes, domElement) {
   let velocityY = 0;
   let onGround  = true;
   let onLadder  = false;
+  let baseFlashlightIntensity = 5.0;
 
   function getFloorYAt(x, z, y) {
     if (y < -0.2) {
@@ -57,8 +58,10 @@ export function createMovement(camera, collidableBoxes, domElement) {
   function update(delta) {
     const fl = camera.children.find(c => c.isSpotLight);
     if (fl) {
-      if (keys['KeyQ']) fl.intensity = Math.max(0,  fl.intensity - 4 * delta);
-      if (keys['KeyE']) fl.intensity = Math.min(20, fl.intensity + 4 * delta);
+      if (keys['KeyQ']) baseFlashlightIntensity = Math.max(0,   baseFlashlightIntensity - 4 * delta);
+      if (keys['KeyE']) baseFlashlightIntensity = Math.min(8.0, baseFlashlightIntensity + 4 * delta);
+
+      let targetIntensity = baseFlashlightIntensity;
 
       if (state.sanity < 40 && !state.isDead) {
         const t = Date.now() * 0.001;
@@ -72,8 +75,9 @@ export function createMovement(camera, collidableBoxes, domElement) {
           ? 1.0
           : (40 - state.sanity) / 40;
 
-        fl.intensity = Math.max(0, fl.intensity + flicker * severity * 2.0);
+        targetIntensity = Math.max(0, baseFlashlightIntensity + flicker * severity * 2.0);
       }
+      fl.intensity = targetIntensity;
     }
 
     const isSwimming = (camera.position.y < -0.5 && !state.waterDrained);
@@ -205,12 +209,15 @@ export function createMovement(camera, collidableBoxes, domElement) {
     if (isSwimming) {
       velocityY = 0;
       
+      const bobSpeed = 1.6;
+      const bobAmount = 0.15;
+      const driftY = Math.sin(Date.now() * 0.001 * bobSpeed) * bobAmount * delta;
+      camera.position.y += driftY;
+
       if (keys['Space']) {
         camera.position.y += 2.0 * delta;
       } else if (keys['KeyC']) {
         camera.position.y -= 2.0 * delta;
-      } else {
-        camera.position.y += 0.05 * Math.sin(Date.now() * 0.002) * delta;
       }
 
       if (camera.position.y > -0.5) {

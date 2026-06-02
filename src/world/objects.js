@@ -43,8 +43,171 @@ export function createObjects(scene, collidableBoxes, interactables, hud, moveme
 
   createPipes(scene);
 
+  function createBubbleTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    
+    // Outer soft refraction ring
+    ctx.strokeStyle = 'rgba(180, 220, 255, 0.35)';
+    ctx.lineWidth = 3.0;
+    ctx.beginPath();
+    ctx.arc(32, 32, 26, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Inner sharp reflection ring
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.arc(32, 32, 28, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Primary highlight reflection (top-left)
+    const grad1 = ctx.createRadialGradient(22, 22, 0, 22, 22, 6);
+    grad1.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+    grad1.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+    ctx.fillStyle = grad1;
+    ctx.beginPath();
+    ctx.arc(22, 22, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Secondary weaker bounce reflection (bottom-right)
+    const grad2 = ctx.createRadialGradient(42, 42, 0, 42, 42, 8);
+    grad2.addColorStop(0, 'rgba(180, 220, 255, 0.4)');
+    grad2.addColorStop(1, 'rgba(180, 220, 255, 0.0)');
+    ctx.fillStyle = grad2;
+    ctx.beginPath();
+    ctx.arc(42, 42, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  const particleCount = 45;
+  const particleGeo = new THREE.BufferGeometry();
+  const particlePositions = new Float32Array(particleCount * 3);
+  const particleColors = new Float32Array(particleCount * 3);
+  const driftX = [];
+  const driftY = [];
+  const driftZ = [];
+  const wobbleOffset = [];
+
+  const initialCamPos = new THREE.Vector3(4, 1.7, -22);
+  for (let i = 0; i < particleCount; i++) {
+    particlePositions[i * 3]     = initialCamPos.x + (Math.random() - 0.5) * 8.0;
+    particlePositions[i * 3 + 1] = -2.5 + (Math.random() - 0.5) * 8.0;
+    particlePositions[i * 3 + 2] = 3.0 + (Math.random() - 0.5) * 8.0;
+
+    particleColors[i * 3]     = 0.05;
+    particleColors[i * 3 + 1] = 0.07;
+    particleColors[i * 3 + 2] = 0.09;
+
+    driftX.push((Math.random() - 0.5) * 0.05);
+    driftY.push(0.20 + Math.random() * 0.35); // Rising speed
+    driftZ.push((Math.random() - 0.5) * 0.05);
+    wobbleOffset.push(Math.random() * Math.PI * 2);
+  }
+
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+  particleGeo.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+
+  const particleMat = new THREE.PointsMaterial({
+    size: 0.10, // slightly smaller bubbles
+    map: createBubbleTexture(),
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexColors: true
+  });
+
+  const particleSystem = new THREE.Points(particleGeo, particleMat);
+  particleSystem.name = "underwaterParticles";
+  particleSystem.visible = false;
+  scene.add(particleSystem);
+
   return {
     update: (delta) => {
+      if (particleSystem) {
+        const isSw = state.isSwimming;
+        particleSystem.visible = isSw;
+        if (isSw) {
+          const camera = state.camera;
+          const flashlight = camera ? camera.children.find(c => c.isSpotLight) : null;
+          const positions = particleGeo.attributes.position.array;
+          const colors = particleGeo.attributes.color.array;
+          const camDir = new THREE.Vector3();
+          if (camera) camera.getWorldDirection(camDir);
+
+          const BOX_SIZE = 8.0;
+          const HALF_BOX = 4.0;
+
+          const t = Date.now() * 0.003;
+          for (let i = 0; i < particleCount; i++) {
+            const wobble = Math.sin(t + wobbleOffset[i]) * 0.12;
+            positions[i * 3]     += (driftX[i] + wobble) * delta;
+            positions[i * 3 + 1] += driftY[i] * delta;
+            positions[i * 3 + 2] += (driftZ[i] + wobble) * delta;
+
+            if (camera) {
+              let dx = positions[i * 3]     - camera.position.x;
+              let dy = positions[i * 3 + 1] - camera.position.y;
+              let dz = positions[i * 3 + 2] - camera.position.z;
+
+              if (dx < -HALF_BOX) positions[i * 3]     += BOX_SIZE;
+              else if (dx > HALF_BOX) positions[i * 3]     -= BOX_SIZE;
+              
+              if (dy < -HALF_BOX) {
+                positions[i * 3 + 1] += BOX_SIZE;
+              } else if (dy > HALF_BOX) {
+                positions[i * 3 + 1] -= BOX_SIZE;
+                positions[i * 3]     = camera.position.x + (Math.random() - 0.5) * BOX_SIZE;
+                positions[i * 3 + 2] = camera.position.z + (Math.random() - 0.5) * BOX_SIZE;
+                driftY[i]            = 0.20 + Math.random() * 0.35;
+              }
+              
+              if (dz < -HALF_BOX) positions[i * 3 + 2] += BOX_SIZE;
+              else if (dz > HALF_BOX) positions[i * 3 + 2] -= BOX_SIZE;
+
+              dx = positions[i * 3]     - camera.position.x;
+              dy = positions[i * 3 + 1] - camera.position.y;
+              dz = positions[i * 3 + 2] - camera.position.z;
+
+              let r = 0.01, g = 0.03, b = 0.06;
+
+              if (flashlight && flashlight.visible) {
+                const d_forward = dx * camDir.x + dy * camDir.y + dz * camDir.z;
+                if (d_forward > 0.1 && d_forward < 12.0) {
+                  const projX = camDir.x * d_forward;
+                  const projY = camDir.y * d_forward;
+                  const projZ = camDir.z * d_forward;
+                  const perpX = dx - projX;
+                  const perpY = dy - projY;
+                  const perpZ = dz - projZ;
+                  const d_perp = Math.sqrt(perpX*perpX + perpY*perpY + perpZ*perpZ);
+                  const beamRadius = d_forward * 0.36;
+
+                  if (d_perp < beamRadius) {
+                    const edgeFade = 1.0 - (d_perp / beamRadius);
+                    const distFade = 1.0 - (d_forward / 12.0);
+                    const intensityScale = Math.min(1.0, flashlight.intensity / 5.0);
+                    const brightness = edgeFade * distFade * intensityScale * 0.75;
+                    r += brightness * 0.45;
+                    g += brightness * 0.72;
+                    b += brightness * 0.90;
+                  }
+                }
+              }
+              colors[i * 3]     = r;
+              colors[i * 3 + 1] = g;
+              colors[i * 3 + 2] = b;
+            }
+          }
+          particleGeo.attributes.position.needsUpdate = true;
+          particleGeo.attributes.color.needsUpdate = true;
+        }
+      }
+
       if (updateDrawerFn) updateDrawerFn(delta);
       if (updateDoorFn) updateDoorFn(delta);
       if (updateLockerFn) updateLockerFn(delta);
@@ -52,6 +215,22 @@ export function createObjects(scene, collidableBoxes, interactables, hud, moveme
       if (updateScreensFn) updateScreensFn(state.powerRestored);
       if (state.puzzles.pressure && pumpRotor) {
         pumpRotor.rotation.z += delta * 4.5;
+      }
+      
+      const waterPlane = scene.getObjectByName("waterPlane");
+      if (waterPlane) {
+        if (waterPlane.material && waterPlane.material.normalMap) {
+          waterPlane.material.normalMap.offset.x += delta * 0.04;
+          waterPlane.material.normalMap.offset.y += delta * 0.03;
+        }
+        if (state.waterDrained) {
+          if (waterPlane.position.y > -3.95) {
+            waterPlane.position.y -= delta * 0.75;
+          } else {
+            waterPlane.position.y = -3.95;
+            waterPlane.visible = false;
+          }
+        }
       }
     }
   };

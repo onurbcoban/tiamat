@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createRustMetalTexture, createRustMetalNormalMap, createDoorTexture, createIronFrameTexture, createWheelTexture, createDoorRoughnessMap, createDoorMetalnessMap, createWoodTexture } from './textures.js';
+import { createRustMetalTexture, createRustMetalNormalMap, createDoorTexture, createIronFrameTexture, createWheelTexture, createDoorRoughnessMap, createDoorMetalnessMap, createWoodTexture, createWaterNormalMap } from './textures.js';
 
 const CEIL_H = 3.2;
 const MID_Y  = CEIL_H / 2;
@@ -306,6 +306,25 @@ function buildFloodedRoom(scene, b) {
   wallE(scene, b, -2, 8, 5.5, floorY, 3.7, matWallFlooded);
 
   addLadder(scene, 0, 7.86, -4, 0.5);
+
+  const waterNormal = createWaterNormalMap();
+  waterNormal.repeat.set(3, 4);
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x143447,
+    roughness: 0.1,
+    metalness: 0.9,
+    transparent: true,
+    opacity: 0.75,
+    normalMap: waterNormal,
+    normalScale: new THREE.Vector2(0.5, 0.5),
+    side: THREE.DoubleSide
+  });
+
+  const waterPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.0, 10.0), waterMat);
+  waterPlane.name = "waterPlane";
+  waterPlane.rotation.x = -Math.PI / 2;
+  waterPlane.position.set(2.0, -0.8, 3.0);
+  scene.add(waterPlane);
 }
 
 function buildGeneratorRoom(scene, b) {
